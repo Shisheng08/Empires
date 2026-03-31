@@ -1099,6 +1099,20 @@ function renderConquestSection(region, attackTargets, selectedTarget, preview) {
               </div>
             </div>
           </div>
+          <div class="battle-readout">
+            <div class="battle-readout-card">
+              <span class="mini-label">Projected margin</span>
+              <strong class="${preview.margin >= 0 ? "positive-text" : "negative-text"}">${formatSignedValue(preview.margin)}</strong>
+            </div>
+            <div class="battle-readout-card">
+              <span class="mini-label">Needed to win</span>
+              <strong>${preview.requiredAttack}</strong>
+            </div>
+            <div class="battle-readout-card">
+              <span class="mini-label">Biggest pressure</span>
+              <strong>${preview.leadingFactor}</strong>
+            </div>
+          </div>
           <div class="field-row combat-footer">
             <p class="field-copy">
               ${preview.outlook.copy}
@@ -1371,7 +1385,7 @@ function launchAttack() {
 
     adjustPostBattleLoyalty(attacker, 4);
     addLogEntry(
-      `${attacker.name} conquers ${defender.name} with ${preview.attack.total} attack against ${preview.defense.total} defense.`,
+      `${attacker.name} conquers ${defender.name} with ${preview.attack.total} attack against ${preview.defense.total} defense (${formatSignedValue(preview.margin)} margin).`,
       "battle"
     );
     addLogEntry(`${defender.name} joins the empire but still requires a governor.`, "system");
@@ -1385,7 +1399,7 @@ function launchAttack() {
   } else {
     adjustPostBattleLoyalty(attacker, -5);
     addLogEntry(
-      `${attacker.name} fails to take ${defender.name}. The assault breaks at ${preview.attack.total} attack against ${preview.defense.total} defense.`,
+      `${attacker.name} fails to take ${defender.name}. The assault breaks at ${preview.attack.total} attack against ${preview.defense.total} defense (${formatSignedValue(preview.margin)} margin).`,
       "battle"
     );
   }
@@ -1417,6 +1431,8 @@ function endTurn() {
   const highestDefense = outputs.reduce((best, entry) =>
     !best || entry.output.defense.total > best.output.defense.total ? entry : best
   , null);
+  const totalStability = outputs.reduce((sum, entry) => sum + entry.output.stability.total, 0);
+  const averageStability = Math.round(totalStability / outputs.length);
 
   state.treasury += totalGold;
   resolveLoyaltyChanges(outputs);
@@ -1429,7 +1445,7 @@ function endTurn() {
 
   addLogEntry(`Treasury grows by ${totalGold} gold and now stands at ${state.treasury}.`, "system");
   addLogEntry(`${highestDefense.region.name} is your strongest bastion at ${highestDefense.output.defense.total} defense.`, "system");
-  addLogEntry(`${lowestStability.region.name} is your most fragile court at ${lowestStability.output.stability.total} stability.`, "warning");
+  addLogEntry(`${lowestStability.region.name} is your most fragile court at ${lowestStability.output.stability.total} stability. Empire average stability is ${averageStability}.`, "warning");
   addLogEntry(`New turn begins under the ${getCurrentDirective().name} directive.`, "directive");
   render();
 }
@@ -1488,7 +1504,7 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
   const defenderGovernor = getCharacterById(defenderRegion.governorId);
   const defenderAssistant = getCharacterById(defenderRegion.assistantId);
 
-  const muster = Math.max(1, Math.floor(attackerOutput.stability.total / 4));
+  const muster = Math.max(1, Math.floor(attackerOutput.stability.total / 6));
   applyStat(attack, "Regional muster", muster + attackerEffect.musterBonus);
 
   if (governor) {
@@ -1525,7 +1541,8 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
 
   applyTypeBonuses({ gold: createStat(0, "", 0), defense, stability: createStat(0, "", 0) }, defenderRegion);
   applyLandmarkDefense(defense, defenderLandmark);
-  applyStat(defense, "Defender readiness", Math.max(1, Math.floor(defenderOutput.stability.total / 5)));
+  applyStat(defense, "Defender readiness", Math.max(2, Math.floor(defenderOutput.stability.total / 4)));
+  applyStat(defense, "Terrain friction", 1);
 
   if (defenderGovernor) {
     applyStat(defense, `${defenderGovernor.name} commands`, getOfficerDefenseContribution(defenderGovernor, "governor"));
@@ -1542,11 +1559,24 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
   finalizeStat(attack);
   finalizeStat(defense);
 
+  const leadingAttackLine = attack.lines
+    .slice(1)
+    .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))[0];
+  const leadingDefenseLine = defense.lines
+    .slice(1)
+    .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))[0];
+  const margin = attack.total - defense.total;
+  const leadingFactor = margin >= 0
+    ? (leadingAttackLine ? leadingAttackLine.label : "Base muster")
+    : (leadingDefenseLine ? leadingDefenseLine.label : "Base defense");
+
   return {
     attack,
     defense,
-    margin: attack.total - defense.total,
-    outlook: getCombatOutlook(attack.total - defense.total)
+    margin,
+    requiredAttack: defense.total,
+    leadingFactor,
+    outlook: getCombatOutlook(margin)
   };
 }
 
@@ -2098,7 +2128,7 @@ function getRegionEffect(regionId) {
 }
 
 function getCombatOutlook(margin) {
-  if (margin >= 5) {
+  if (margin >= 4) {
     return {
       label: "Favored",
       className: "positive",
@@ -2106,7 +2136,7 @@ function getCombatOutlook(margin) {
     };
   }
 
-  if (margin >= 1) {
+  if (margin >= 0) {
     return {
       label: "Narrow edge",
       className: "neutral",
@@ -2114,11 +2144,11 @@ function getCombatOutlook(margin) {
     };
   }
 
-  if (margin >= -3) {
+  if (margin >= -4) {
     return {
       label: "Risky",
       className: "warning",
-      copy: "This attack is close to even, but the defender still holds the edge."
+      copy: "This attack is close, but the defender still holds the edge. A stronger directive or ability use could swing it."
     };
   }
 

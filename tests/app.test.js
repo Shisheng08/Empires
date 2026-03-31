@@ -26,7 +26,7 @@ test("computeRegionOutput returns the seeded Silvermere totals", () => {
   assert.equal(output.stability.total, 20);
 });
 
-test("conquest directive adds four attack power to combat preview", () => {
+test("conquest directive improves attack preview while keeping the defense side unchanged", () => {
   const attacker = game.getRegionById("obsidian-crown");
   const defender = game.getRegionById("veilmere");
   const developmentPreview = game.computeCombatPreview(attacker, defender);
@@ -34,7 +34,8 @@ test("conquest directive adds four attack power to combat preview", () => {
   game.setDirective("conquest");
   const conquestPreview = game.computeCombatPreview(attacker, defender);
 
-  assert.equal(conquestPreview.attack.total - developmentPreview.attack.total, 4);
+  assert.equal(conquestPreview.attack.total - developmentPreview.attack.total, 3);
+  assert.equal(conquestPreview.margin > developmentPreview.margin, true);
   assert.equal(conquestPreview.defense.total, developmentPreview.defense.total);
 });
 

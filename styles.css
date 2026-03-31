@@ -910,6 +910,34 @@ select {
   gap: 10px;
 }
 
+.battle-readout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.battle-readout-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.025);
+  display: grid;
+  gap: 6px;
+}
+
+.battle-readout-card strong {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.1rem;
+}
+
+.positive-text {
+  color: #cce7d2;
+}
+
+.negative-text {
+  color: #f0b8b0;
+}
+
 .outlook-chip.positive {
   border-color: rgba(135, 188, 148, 0.4);
   background: rgba(135, 188, 148, 0.12);
@@ -1077,6 +1105,7 @@ select:focus,
   .ability-grid,
   .target-grid,
   .combat-preview,
+  .battle-readout,
   .stat-grid {
     grid-template-columns: 1fr;
   }
