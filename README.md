@@ -35,6 +35,7 @@ No package install, build step, or local server is required.
 - `styles.css`: dark fantasy UI styling and responsive layout
 - `app.js`: game state, formulas, rendering, interactions, combat, and turn resolution
 - `PROJECT_PLAN.md`: reviewed plan and phase tracker
+- `DEVELOPMENT_ROADMAP.md`: phased roadmap and step-by-step development sequence
 - `AGENTS.md`: repository-specific working rules
 
 ## Git
