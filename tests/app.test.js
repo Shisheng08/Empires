@@ -92,3 +92,23 @@ test("renderMapLegend renders the configured legend sections", () => {
   assert.match(markup, /Highlights/);
   assert.match(markup, /Valid assault target/);
 });
+
+test("renderCharacterRosterMarkup defaults to the deployed-officer view for the selected province", () => {
+  const markup = game.renderCharacterRosterMarkup(game.getRegionById("obsidian-crown"));
+
+  assert.match(markup, /Deployed Here \(2\)/);
+  assert.match(markup, /Court complete/);
+  assert.match(markup, /Kael Thorn/);
+  assert.match(markup, /Ysra Moonveil/);
+  assert.doesNotMatch(markup, /Seraphine Vale/);
+});
+
+test("renderCharacterRosterMarkup can switch to the full roster view", () => {
+  game.state.selectedRosterTab = "all";
+
+  const markup = game.renderCharacterRosterMarkup(game.getRegionById("obsidian-crown"));
+
+  assert.match(markup, /All Officers \(9\)/);
+  assert.match(markup, /Seraphine Vale/);
+  assert.match(markup, /Serving here/);
+});

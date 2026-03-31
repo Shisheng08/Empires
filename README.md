@@ -20,6 +20,7 @@ Run the game-rule tests with:
 - Click a province on the visual map or in the left panel to inspect it.
 - Use the top bar to switch the global directive each turn.
 - In owned regions, assign a governor and optional assistant from the center panel.
+- Use the right-side officer panel tabs to switch between the selected province court and the full imperial roster.
 - Activate available active abilities from the selected region before combat.
 - Pick an adjacent neutral region in the conquest section and launch one assault per turn.
 - Click `End Turn` to collect gold, resolve loyalty changes, and refresh your conquest action.

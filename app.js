@@ -435,6 +435,7 @@ function createInitialState() {
     activeMapId: "ashen-realm",
     directiveId: "development",
     selectedDetailTab: "overview",
+    selectedRosterTab: "deployed",
     selectedRegionId: "obsidian-crown",
     selectedAttackTargetId: null,
     attackUsedThisTurn: false,
@@ -489,6 +490,7 @@ function createElements() {
     selectedRegionStatus: document.querySelector("#selected-region-status"),
     regionList: document.querySelector("#region-list"),
     regionDetail: document.querySelector("#region-detail"),
+    characterRosterStatus: document.querySelector("#character-roster-status"),
     characterRoster: document.querySelector("#character-roster"),
     eventLog: document.querySelector("#event-log"),
     turnSummary: document.querySelector("#turn-summary"),
@@ -523,6 +525,7 @@ function bindEvents() {
   elements.directiveControls.addEventListener("click", handleDirectiveClick);
   elements.regionDetail.addEventListener("change", handleRegionDetailChange);
   elements.regionDetail.addEventListener("click", handleRegionDetailClick);
+  elements.characterRoster.addEventListener("click", handleCharacterRosterClick);
   elements.endTurnButton.addEventListener("click", endTurn);
 }
 
@@ -596,6 +599,16 @@ function handleRegionDetailClick(event) {
   if (attackButton) {
     launchAttack();
   }
+}
+
+function handleCharacterRosterClick(event) {
+  const tabButton = event.target.closest("[data-roster-tab]");
+  if (!tabButton || tabButton.dataset.rosterTab === state.selectedRosterTab) {
+    return;
+  }
+
+  state.selectedRosterTab = tabButton.dataset.rosterTab;
+  render();
 }
 
 // Render pipeline.
@@ -1244,7 +1257,210 @@ function renderAttackTargetOptions(region) {
 
 function renderCharacterRoster() {
   const selectedRegion = getSelectedRegion();
-  const sortedCharacters = state.characters.slice().sort((left, right) => {
+  const stationedCount = getRegionOfficers(selectedRegion).length;
+
+  elements.characterRosterStatus.textContent =
+    state.selectedRosterTab === "deployed"
+      ? `${selectedRegion.name}: ${stationedCount} officer${stationedCount === 1 ? "" : "s"} deployed in this province`
+      : `Full imperial roster. ${stationedCount} officer${stationedCount === 1 ? "" : "s"} currently serve in ${selectedRegion.name}.`;
+
+  elements.characterRoster.innerHTML = renderCharacterRosterMarkup(selectedRegion);
+}
+
+function renderCharacterRosterMarkup(selectedRegion) {
+  return `
+    ${renderRosterTabs(selectedRegion)}
+    <div class="roster-panel-stack">
+      ${state.selectedRosterTab === "deployed" ? renderDeployedRoster(selectedRegion) : renderFullRoster(selectedRegion)}
+    </div>
+  `;
+}
+
+function renderRosterTabs(selectedRegion) {
+  const stationedCount = getRegionOfficers(selectedRegion).length;
+  const tabs = [
+    { id: "deployed", label: `Deployed Here (${stationedCount})` },
+    { id: "all", label: `All Officers (${state.characters.length})` }
+  ];
+
+  return `
+    <div class="roster-tabs" role="tablist" aria-label="Officer panel tabs">
+      ${tabs.map((tab) => `
+        <button
+          class="roster-tab ${state.selectedRosterTab === tab.id ? "active" : ""}"
+          type="button"
+          data-roster-tab="${tab.id}"
+        >
+          ${tab.label}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderDeployedRoster(region) {
+  const governor = getCharacterById(region.governorId);
+  const assistant = getCharacterById(region.assistantId);
+  const relationship = getRelationshipInfo(region);
+
+  if (region.owner !== "player") {
+    return `
+      <section class="empty-state compact">
+        <div class="mini-label">Neutral province</div>
+        <p class="empty-copy">This province has no imperial court yet. Capture it to station a governor and assistant here.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="officer-focus-panel">
+      <div class="field-row">
+        <div>
+          <div class="mini-label">Province court</div>
+          <strong>${region.name}</strong>
+        </div>
+        <span class="detail-pill">${governor && assistant ? "Court complete" : "Open seat"}</span>
+      </div>
+      <div class="relationship-banner ${relationship.kind}">
+        <strong>${relationship.title}</strong>
+        <span>${relationship.summary}</span>
+      </div>
+      <div class="roster-focus-grid">
+        ${renderOfficerFocusCard(governor, "Governor", region)}
+        ${renderOfficerFocusCard(assistant, "Assistant", region)}
+      </div>
+    </section>
+  `;
+}
+
+function renderFullRoster(selectedRegion) {
+  return getSortedCharacters()
+    .map((character) => renderCompactCharacterCard(character, selectedRegion))
+    .join("");
+}
+
+function renderOfficerFocusCard(character, role, region) {
+  if (!character) {
+    return `
+      <article class="character-card officer-card vacant">
+        <div class="field-row">
+          <span class="mini-label">${role}</span>
+          <span class="status-badge neutral">Vacant</span>
+        </div>
+        <p class="card-status">
+          ${region.owner === "player"
+            ? `No ${role.toLowerCase()} is assigned. Fill this seat from the Court tab.`
+            : "This seat is unavailable until the province is captured."}
+        </p>
+      </article>
+    `;
+  }
+
+  const loyaltyBand = getLoyaltyBand(character.loyalty);
+
+  return `
+    <article class="character-card officer-card is-selected-station">
+      <div class="field-row">
+        <span class="mini-label">${role}</span>
+        <span class="ability-badge ${character.abilityType}">${character.abilityType}</span>
+      </div>
+      <div class="card-top">
+        <div class="card-identity">
+          <div class="portrait">${character.portrait}</div>
+          <div>
+            <div class="card-name">${character.name}</div>
+            <p class="card-trait">${character.trait}</p>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Ability</span>
+        <span>${character.abilityName}</span>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Loyalty</span>
+        <span class="loyalty-label ${loyaltyBand.className}">${character.loyalty} ${loyaltyBand.label}</span>
+      </div>
+      <div class="loyalty-track compact">
+        <div class="loyalty-fill ${loyaltyBand.className}" style="width: ${character.loyalty}%"></div>
+      </div>
+      <div class="tag-row">
+        <span class="mini-label">Friends</span>
+        ${renderRelationChips(character.friends, "friend")}
+      </div>
+      <div class="tag-row">
+        <span class="mini-label">Rivals</span>
+        ${renderRelationChips(character.rivals, "rival")}
+      </div>
+      <div class="roster-stats compact">
+        ${renderRosterStat("Mgt", character.might)}
+        ${renderRosterStat("Int", character.intellect)}
+        ${renderRosterStat("Cha", character.charisma)}
+        ${renderRosterStat("Wil", character.will)}
+      </div>
+    </article>
+  `;
+}
+
+function renderCompactCharacterCard(character, selectedRegion) {
+  const assignment = getCharacterAssignment(character.id);
+  const stationedHere = assignment && assignment.regionId === selectedRegion.id;
+  const loyaltyBand = getLoyaltyBand(character.loyalty);
+
+  return `
+    <article class="character-card compact ${assignment ? "is-assigned" : ""} ${stationedHere ? "is-selected-station" : ""}">
+      <div class="card-top">
+        <div class="card-identity">
+          <div class="portrait">${character.portrait}</div>
+          <div>
+            <div class="card-name">${character.name}</div>
+            <p class="card-trait">${character.trait}</p>
+          </div>
+        </div>
+        <span class="ability-badge ${character.abilityType}">${character.abilityType}</span>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Ability</span>
+        <span>${character.abilityName}</span>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Assignment</span>
+        <span>${describeAssignment(character)}</span>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Loyalty</span>
+        <span class="loyalty-label ${loyaltyBand.className}">${character.loyalty} ${loyaltyBand.label}</span>
+      </div>
+      <div class="roster-stats compact">
+        ${renderRosterStat("Mgt", character.might)}
+        ${renderRosterStat("Int", character.intellect)}
+        ${renderRosterStat("Cha", character.charisma)}
+        ${renderRosterStat("Wil", character.will)}
+      </div>
+      <div class="compact-tag-row">
+        ${stationedHere ? `<span class="detail-pill">Serving here</span>` : ""}
+        ${renderCompactRelationSummary(character)}
+      </div>
+    </article>
+  `;
+}
+
+function renderCompactRelationSummary(character) {
+  const summaries = [];
+
+  if (character.friends.length) {
+    summaries.push(`<span class="relation-summary friend">${character.friends.length} friend${character.friends.length === 1 ? "" : "s"}</span>`);
+  }
+
+  if (character.rivals.length) {
+    summaries.push(`<span class="relation-summary rival">${character.rivals.length} rival${character.rivals.length === 1 ? "" : "s"}</span>`);
+  }
+
+  return summaries.join("");
+}
+
+function getSortedCharacters() {
+  return state.characters.slice().sort((left, right) => {
     const leftAssigned = getCharacterAssignment(left.id) ? 0 : 1;
     const rightAssigned = getCharacterAssignment(right.id) ? 0 : 1;
 
@@ -1254,61 +1470,6 @@ function renderCharacterRoster() {
 
     return right.loyalty - left.loyalty;
   });
-
-  elements.characterRoster.innerHTML = sortedCharacters
-    .map((character) => {
-      const assignment = getCharacterAssignment(character.id);
-      const stationedHere = assignment && assignment.regionId === selectedRegion.id;
-      const loyaltyBand = getLoyaltyBand(character.loyalty);
-
-      return `
-        <article class="character-card ${assignment ? "is-assigned" : ""} ${stationedHere ? "is-selected-station" : ""}">
-          <div class="card-top">
-            <div class="card-identity">
-              <div class="portrait">${character.portrait}</div>
-              <div>
-                <div class="card-name">${character.name}</div>
-                <p class="card-trait">${character.trait}</p>
-              </div>
-            </div>
-            <span class="ability-badge ${character.abilityType}">${character.abilityType}</span>
-          </div>
-
-          <div class="field-row">
-            <span class="mini-label">Ability</span>
-            <span>${character.abilityName}</span>
-          </div>
-
-          <div class="field-row">
-            <span class="mini-label">Loyalty</span>
-            <span class="loyalty-label ${loyaltyBand.className}">${character.loyalty} ${loyaltyBand.label}</span>
-          </div>
-          <div class="loyalty-track compact">
-            <div class="loyalty-fill ${loyaltyBand.className}" style="width: ${character.loyalty}%"></div>
-          </div>
-
-          <p class="card-status">${describeAssignment(character)}</p>
-
-          <div class="tag-row">
-            <span class="mini-label">Friends</span>
-            ${renderRelationChips(character.friends, "friend")}
-          </div>
-          <div class="tag-row">
-            <span class="mini-label">Rivals</span>
-            ${renderRelationChips(character.rivals, "rival")}
-          </div>
-
-          <div class="roster-stats">
-            ${renderRosterStat("Might", character.might)}
-            ${renderRosterStat("Intel", character.intellect)}
-            ${renderRosterStat("Char", character.charisma)}
-            ${renderRosterStat("Will", character.will)}
-            ${renderRosterStat("Loyal", character.loyalty)}
-          </div>
-        </article>
-      `;
-    })
-    .join("");
 }
 
 function renderLog() {
@@ -2134,6 +2295,12 @@ function getAssignedCharacters() {
   return state.characters.filter((character) => getCharacterAssignment(character.id));
 }
 
+function getRegionOfficers(region) {
+  return [region.governorId, region.assistantId]
+    .map((characterId) => getCharacterById(characterId))
+    .filter(Boolean);
+}
+
 function getOwnedRegions() {
   return state.regions.filter((region) => region.owner === "player");
 }
@@ -2304,6 +2471,7 @@ if (typeof module !== "undefined" && module.exports) {
     state,
     resetState,
     renderMapLegend,
+    renderCharacterRosterMarkup,
     computeRegionOutput,
     computeCombatPreview,
     getAttackTargets,
@@ -2313,6 +2481,7 @@ if (typeof module !== "undefined" && module.exports) {
     getSelectedRegion,
     getRegionById,
     getCharacterById,
+    getRegionOfficers,
     getCharacterAssignment,
     getOwnedRegions,
     selectRegion,

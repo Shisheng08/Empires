@@ -438,11 +438,9 @@ select {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0));
   color: inherit;
   text-align: left;
-  cursor: pointer;
 }
 
 .region-card:hover,
-.character-card:hover,
 .target-card:hover,
 .directive-button:hover,
 .action-button:hover,
@@ -452,7 +450,6 @@ select:hover {
 }
 
 .region-card:hover,
-.character-card:hover,
 .target-card:hover,
 .directive-button:hover,
 .action-button:hover,
@@ -470,6 +467,11 @@ select:hover {
 
 .character-card.is-assigned {
   border-color: rgba(135, 188, 148, 0.35);
+}
+
+.region-card,
+.target-card {
+  cursor: pointer;
 }
 
 .region-card-top,
@@ -686,6 +688,46 @@ select:hover {
   background: linear-gradient(180deg, rgba(218, 181, 111, 0.18), rgba(218, 181, 111, 0.05));
 }
 
+.roster-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.roster-tab {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.roster-tab:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.roster-tab.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(218, 181, 111, 0.18), rgba(218, 181, 111, 0.05));
+}
+
+.roster-panel-stack,
+.roster-focus-grid {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.officer-focus-panel {
+  display: grid;
+  gap: 12px;
+}
+
 .detail-meta-grid,
 .dynamics-grid,
 .command-grid {
@@ -881,6 +923,26 @@ select {
   gap: 12px;
 }
 
+.officer-card,
+.character-card.compact {
+  display: grid;
+  gap: 10px;
+}
+
+.character-card.compact {
+  padding: 12px;
+}
+
+.character-card.compact .card-trait,
+.officer-card .card-trait {
+  margin: 4px 0 0;
+}
+
+.character-card.compact .field-row,
+.officer-card .field-row {
+  align-items: center;
+}
+
 .portrait {
   width: 48px;
   height: 48px;
@@ -898,6 +960,10 @@ select {
 .post-metrics,
 .roster-stats {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.roster-stats.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .roster-stat,
@@ -985,6 +1051,41 @@ select {
 .battle-readout-card strong {
   font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-size: 1.1rem;
+}
+
+.compact-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.relation-summary {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.relation-summary.friend {
+  border: 1px solid rgba(135, 188, 148, 0.4);
+  color: #c7e5cd;
+}
+
+.relation-summary.rival {
+  border: 1px solid rgba(217, 127, 115, 0.4);
+  color: #f0bdb5;
+}
+
+.officer-card.vacant {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.empty-state.compact {
+  padding: 16px;
 }
 
 .positive-text {
@@ -1119,6 +1220,7 @@ select {
 select:focus,
 .directive-button:focus,
 .region-card:focus,
+.roster-tab:focus,
 .target-card:focus,
 .action-button:focus,
 .end-turn-button:focus {
