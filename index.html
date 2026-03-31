@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empire of the Chosen</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="panel top-bar">
+      <div class="brand-block">
+        <p class="eyebrow">Epic Fantasy Strategy Prototype</p>
+        <h1>Empire of the Chosen</h1>
+      </div>
+      <div class="top-stat">
+        <span class="hud-label">Turn</span>
+        <strong id="turn-number">1</strong>
+      </div>
+      <div class="directive-block">
+        <span class="hud-label">Current Directive</span>
+        <strong id="current-directive"></strong>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <aside class="panel sidebar-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Regions</h2>
+            <p class="panel-subtitle">Holdings, borders, and contested lands</p>
+          </div>
+        </div>
+        <div id="region-list" class="region-list"></div>
+      </aside>
+
+      <section class="panel detail-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Selected Region</h2>
+            <p id="selected-region-status" class="panel-subtitle">Review the seat of power and its appointments</p>
+          </div>
+        </div>
+        <div id="region-detail" class="region-detail"></div>
+      </section>
+
+      <aside class="panel sidebar-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Character Roster</h2>
+            <p class="panel-subtitle">The named officers who shape the empire</p>
+          </div>
+        </div>
+        <div id="character-roster" class="character-roster"></div>
+      </aside>
+    </main>
+
+    <section class="panel bottom-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Event Log</h2>
+          <p class="panel-subtitle">Court decrees, revenue reports, and frontier whispers</p>
+        </div>
+      </div>
+      <div class="bottom-grid">
+        <div id="event-log" class="event-log"></div>
+        <div class="turn-panel">
+          <p>
+            Govern your holdings, balance powerful personalities, and end the turn to collect
+            income and receive a new directive.
+          </p>
+          <button id="end-turn-button" class="end-turn-button" type="button">End Turn</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
