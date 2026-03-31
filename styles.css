@@ -625,6 +625,10 @@ select:hover {
   gap: 14px;
 }
 
+.detail-copy.compact {
+  margin: 0;
+}
+
 .detail-hero h3 {
   font-size: clamp(1.85rem, 3vw, 2.5rem);
 }
@@ -633,10 +637,63 @@ select:hover {
   flex-wrap: wrap;
 }
 
+.detail-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-pill {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.025);
+  display: grid;
+  gap: 4px;
+}
+
+.summary-pill strong {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.detail-tab {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.detail-tab:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.detail-tab.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(218, 181, 111, 0.18), rgba(218, 181, 111, 0.05));
+}
+
 .detail-meta-grid,
 .dynamics-grid,
 .command-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.section-header.compact p {
+  display: none;
 }
 
 .meta-card,
@@ -1098,6 +1155,7 @@ select:focus,
   .map-panel-body,
   .main-grid,
   .bottom-grid,
+  .detail-summary-grid,
   .detail-meta-grid,
   .dynamics-grid,
   .command-grid,

@@ -434,6 +434,7 @@ function createInitialState() {
     treasury: 24,
     activeMapId: "ashen-realm",
     directiveId: "development",
+    selectedDetailTab: "overview",
     selectedRegionId: "obsidian-crown",
     selectedAttackTargetId: null,
     attackUsedThisTurn: false,
@@ -571,6 +572,13 @@ function handleRegionDetailChange(event) {
 }
 
 function handleRegionDetailClick(event) {
+  const tabButton = event.target.closest("[data-detail-tab]");
+  if (tabButton) {
+    state.selectedDetailTab = tabButton.dataset.detailTab;
+    render();
+    return;
+  }
+
   const targetButton = event.target.closest("[data-select-target-id]");
   if (targetButton) {
     state.selectedAttackTargetId = targetButton.dataset.selectTargetId;
@@ -797,8 +805,8 @@ function renderRegionDetail() {
 
   elements.selectedRegionStatus.textContent =
     region.owner === "player"
-      ? "Player-held domain with full control over court assignments, abilities, and invasions"
-      : "Neutral province. Review its defenses and approach from a neighboring holding";
+      ? "Player-held province. Use tabs to focus on economy, court, or conquest."
+      : "Neutral province. Use tabs to review defenses and invasion paths.";
 
   elements.regionDetail.innerHTML = `
     <section class="detail-hero">
@@ -813,7 +821,85 @@ function renderRegionDetail() {
           ${region.landmark ? `<span class="detail-pill">${getLandmark(region.landmark).name}</span>` : ""}
         </div>
       </div>
-      <p class="detail-copy">${getRegionDescription(region)}</p>
+      <p class="detail-copy compact">${getRegionDescription(region)}</p>
+      <div class="detail-summary-grid">
+        <div class="summary-pill">
+          <span class="mini-label">Gold</span>
+          <strong>${output.gold.total}</strong>
+        </div>
+        <div class="summary-pill">
+          <span class="mini-label">Defense</span>
+          <strong>${output.defense.total}</strong>
+        </div>
+        <div class="summary-pill">
+          <span class="mini-label">Stability</span>
+          <strong>${output.stability.total}</strong>
+        </div>
+      </div>
+    </section>
+
+    ${renderDetailTabs()}
+    ${renderDetailTabPanel(region, output, governor, assistant, relationship, attackTargets, selectedTarget, preview)}
+
+    ${region.owner === "player" && !region.governorId ? `
+      <div class="warning-strip">
+        Imperial law requires every owned province to have a governor before the next turn can begin.
+      </div>
+    ` : ""}
+  `;
+}
+
+function renderDetailTabs() {
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "court", label: "Court" },
+    { id: "conquest", label: "Conquest" }
+  ];
+
+  return `
+    <div class="detail-tabs" role="tablist" aria-label="Region detail tabs">
+      ${tabs.map((tab) => `
+        <button
+          class="detail-tab ${state.selectedDetailTab === tab.id ? "active" : ""}"
+          type="button"
+          data-detail-tab="${tab.id}"
+        >
+          ${tab.label}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderDetailTabPanel(region, output, governor, assistant, relationship, attackTargets, selectedTarget, preview) {
+  switch (state.selectedDetailTab) {
+    case "court":
+      return renderCourtTab(region, governor, assistant, relationship);
+    case "conquest":
+      return renderConquestTab(region, attackTargets, selectedTarget, preview);
+    case "overview":
+    default:
+      return renderOverviewTab(region, output, governor, assistant, relationship);
+  }
+}
+
+function renderOverviewTab(region, output, governor, assistant, relationship) {
+  return `
+    <section class="section-block">
+      <div class="section-header compact">
+        <h4>Derived Output</h4>
+      </div>
+      <div class="stat-grid detailed">
+        ${renderDetailedStatCard("Gold", output.gold)}
+        ${renderDetailedStatCard("Defense", output.defense)}
+        ${renderDetailedStatCard("Stability", output.stability)}
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-header compact">
+        <h4>Regional Context</h4>
+      </div>
       <div class="detail-meta-grid">
         <div class="meta-card">
           <div class="mini-label">Landmark effect</div>
@@ -827,21 +913,8 @@ function renderRegionDetail() {
     </section>
 
     <section class="section-block">
-      <div class="section-header">
-        <h4>Derived Output</h4>
-        <p>These values are used during end-turn resolution. Every modifier stays visible in the formula list.</p>
-      </div>
-      <div class="stat-grid detailed">
-        ${renderDetailedStatCard("Gold", output.gold)}
-        ${renderDetailedStatCard("Defense", output.defense)}
-        ${renderDetailedStatCard("Stability", output.stability)}
-      </div>
-    </section>
-
-    <section class="section-block">
-      <div class="section-header">
-        <h4>Court Dynamics</h4>
-        <p>Friends in the same region grant bonuses. Rivals impose penalties unless an effect suppresses them.</p>
+      <div class="section-header compact">
+        <h4>Court Snapshot</h4>
       </div>
       <div class="relationship-banner ${relationship.kind}">
         <strong>${relationship.title}</strong>
@@ -852,82 +925,89 @@ function renderRegionDetail() {
         ${renderLoyaltyCard("Assistant", assistant)}
       </div>
     </section>
+  `;
+}
 
-    ${
-      region.owner === "player"
-        ? `
-          <section class="section-block">
-            <div class="section-header">
-              <h4>Appointments</h4>
-              <p>Every owned province needs a governor before the turn may end. Assistants remain optional.</p>
-            </div>
-            <div class="assignment-grid">
-              <div class="assignment-slot">
-                <label class="field-label">
-                  <span class="assignment-role">Governor</span>
-                  <select data-region-id="${region.id}" data-role="governor">
-                    ${renderCharacterOptions(region, "governor")}
-                  </select>
-                </label>
-                ${renderPostCard(governor, "Governor")}
-              </div>
-              <div class="assignment-slot">
-                <label class="field-label">
-                  <span class="assignment-role">Assistant</span>
-                  <select data-region-id="${region.id}" data-role="assistant">
-                    ${renderCharacterOptions(region, "assistant")}
-                  </select>
-                </label>
-                ${renderPostCard(assistant, "Assistant")}
-              </div>
-            </div>
-          </section>
+function renderCourtTab(region, governor, assistant, relationship) {
+  if (region.owner !== "player") {
+    return `
+      <section class="empty-state">
+        <div class="mini-label">Neutral court</div>
+        <p class="empty-copy">Neutral provinces cannot be staffed yet. Capture this province before assigning officers.</p>
+      </section>
+    `;
+  }
 
-          <section class="section-block">
-            <div class="section-header">
-              <h4>Active Abilities</h4>
-              <p>Active powers are manual, once per officer per turn, and remain in effect until the turn ends.</p>
-            </div>
-            <div class="ability-grid">
-              ${renderAbilitySection(region)}
-            </div>
-          </section>
-
-          <section class="section-block">
-            <div class="section-header">
-              <h4>Conquest</h4>
-              <p>One assault may be launched each turn from a player-owned region into an adjacent neutral province.</p>
-            </div>
-            ${renderConquestSection(region, attackTargets, selectedTarget, preview)}
-          </section>
-        `
-        : `
-          <section class="section-block">
-            <div class="section-header">
-              <h4>Approach</h4>
-              <p>Neutral provinces cannot be staffed yet, but their defenses and attack routes are already visible.</p>
-            </div>
-            <div class="command-grid">
-              <div class="meta-card">
-                <div class="mini-label">Attackable from</div>
-                <div class="neighbor-list">${renderPlayerNeighborChips(region)}</div>
-              </div>
-              <div class="meta-card">
-                <div class="mini-label">Defense posture</div>
-                <div class="detail-copy">
-                  Base defense, province type, landmark bonuses, and any future defenders all stack here.
-                </div>
-              </div>
-            </div>
-          </section>
-        `
-    }
-
-    ${region.owner === "player" && !region.governorId ? `
-      <div class="warning-strip">
-        Imperial law requires every owned province to have a governor before the next turn can begin.
+  return `
+    <section class="section-block">
+      <div class="section-header compact">
+        <h4>Appointments</h4>
       </div>
-    ` : ""}
+      <div class="relationship-banner ${relationship.kind}">
+        <strong>${relationship.title}</strong>
+        <span>${relationship.summary}</span>
+      </div>
+      <div class="assignment-grid">
+        <div class="assignment-slot">
+          <label class="field-label">
+            <span class="assignment-role">Governor</span>
+            <select data-region-id="${region.id}" data-role="governor">
+              ${renderCharacterOptions(region, "governor")}
+            </select>
+          </label>
+          ${renderPostCard(governor, "Governor")}
+        </div>
+        <div class="assignment-slot">
+          <label class="field-label">
+            <span class="assignment-role">Assistant</span>
+            <select data-region-id="${region.id}" data-role="assistant">
+              ${renderCharacterOptions(region, "assistant")}
+            </select>
+          </label>
+          ${renderPostCard(assistant, "Assistant")}
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-header compact">
+        <h4>Active Abilities</h4>
+      </div>
+      <div class="ability-grid">
+        ${renderAbilitySection(region)}
+      </div>
+    </section>
+  `;
+}
+
+function renderConquestTab(region, attackTargets, selectedTarget, preview) {
+  if (region.owner === "player") {
+    return `
+      <section class="section-block">
+        <div class="section-header compact">
+          <h4>Conquest</h4>
+        </div>
+        ${renderConquestSection(region, attackTargets, selectedTarget, preview)}
+      </section>
+    `;
+  }
+
+  return `
+    <section class="section-block">
+      <div class="section-header compact">
+        <h4>Approach</h4>
+      </div>
+      <div class="command-grid">
+        <div class="meta-card">
+          <div class="mini-label">Attackable from</div>
+          <div class="neighbor-list">${renderPlayerNeighborChips(region)}</div>
+        </div>
+        <div class="meta-card">
+          <div class="mini-label">Defense posture</div>
+          <div class="detail-copy">Base defense, province type, landmark bonuses, and defender readiness all stack here.</div>
+        </div>
+      </div>
+    </section>
   `;
 }
 
