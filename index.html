@@ -13,13 +13,27 @@
         <p class="eyebrow">Epic Fantasy Strategy Prototype</p>
         <h1>Empire of the Chosen</h1>
       </div>
-      <div class="top-stat">
-        <span class="hud-label">Turn</span>
-        <strong id="turn-number">1</strong>
+
+      <div class="overview-strip">
+        <article class="summary-card">
+          <span class="hud-label">Turn</span>
+          <strong id="turn-number" class="summary-value">1</strong>
+        </article>
+        <article class="summary-card">
+          <span class="hud-label">Treasury</span>
+          <strong id="treasury-value" class="summary-value">24</strong>
+        </article>
+        <article class="summary-card">
+          <span class="hud-label">Holdings</span>
+          <strong id="owned-count" class="summary-value">2 / 7</strong>
+        </article>
       </div>
+
       <div class="directive-block">
         <span class="hud-label">Current Directive</span>
-        <strong id="current-directive"></strong>
+        <strong id="current-directive-name">Development</strong>
+        <p id="current-directive-copy" class="directive-copy"></p>
+        <div id="directive-controls" class="directive-controls"></div>
       </div>
     </header>
 
@@ -28,7 +42,7 @@
         <div class="panel-header">
           <div>
             <h2>Regions</h2>
-            <p class="panel-subtitle">Holdings, borders, and contested lands</p>
+            <p class="panel-subtitle">Holdings, borders, landmarks, and invasion routes</p>
           </div>
         </div>
         <div id="region-list" class="region-list"></div>
@@ -38,7 +52,7 @@
         <div class="panel-header">
           <div>
             <h2>Selected Region</h2>
-            <p id="selected-region-status" class="panel-subtitle">Review the seat of power and its appointments</p>
+            <p id="selected-region-status" class="panel-subtitle">Review the seat of power, its court, and conquest options</p>
           </div>
         </div>
         <div id="region-detail" class="region-detail"></div>
@@ -48,7 +62,7 @@
         <div class="panel-header">
           <div>
             <h2>Character Roster</h2>
-            <p class="panel-subtitle">The named officers who shape the empire</p>
+            <p class="panel-subtitle">Named officers, loyalties, abilities, and rivalries</p>
           </div>
         </div>
         <div id="character-roster" class="character-roster"></div>
@@ -59,16 +73,17 @@
       <div class="panel-header">
         <div>
           <h2>Event Log</h2>
-          <p class="panel-subtitle">Court decrees, revenue reports, and frontier whispers</p>
+          <p class="panel-subtitle">Court decrees, battles, treasury reports, and shifting loyalties</p>
         </div>
       </div>
       <div class="bottom-grid">
         <div id="event-log" class="event-log"></div>
         <div class="turn-panel">
-          <p>
-            Govern your holdings, balance powerful personalities, and end the turn to collect
-            income and receive a new directive.
+          <p id="turn-summary">
+            Assign your court, choose a directive, activate powers, strike at a neighboring province,
+            and end the turn to resolve gold, loyalty, and regional pressure.
           </p>
+          <div id="victory-banner" class="victory-banner" hidden></div>
           <button id="end-turn-button" class="end-turn-button" type="button">End Turn</button>
         </div>
       </div>

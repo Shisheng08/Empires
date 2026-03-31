@@ -1,16 +1,80 @@
-const directives = [
-  "Secure the silver roads before the frontier houses sense weakness.",
-  "Win the loyalty of the mystic shrines and bind omen-readers to the throne.",
-  "Fortify the northern marches and deny raiders a soft crossing.",
-  "Gather surplus tribute to prepare for a greater campaign season.",
-  "Quiet unrest in the border courts before rival claimants take root."
-];
+const DIRECTIVES = {
+  conquest: {
+    id: "conquest",
+    name: "Conquest",
+    summary: "Push the front. Assaults gain +4 attack, but every owned region suffers -1 stability this turn.",
+    attackBonus: 4,
+    goldBonus: 0,
+    stabilityBonus: -1
+  },
+  development: {
+    id: "development",
+    name: "Development",
+    summary: "Favor caravans, tax ledgers, and civic order. Owned regions gain +2 gold this turn.",
+    attackBonus: 0,
+    goldBonus: 2,
+    stabilityBonus: 0
+  },
+  stability: {
+    id: "stability",
+    name: "Stability",
+    summary: "Strengthen legitimacy and recovery. Owned regions gain +2 stability and assigned officers recover extra loyalty.",
+    attackBonus: 0,
+    goldBonus: 0,
+    stabilityBonus: 2
+  }
+};
 
-// Regions and characters are kept in plain objects so the prototype stays easy to extend.
+const LANDMARKS = {
+  "sky-citadel": {
+    name: "Sky Citadel",
+    summary: "Signal towers and elevated keeps harden the walls.",
+    goldBonus: 0,
+    defenseBonus: 2,
+    stabilityBonus: 0,
+    attackBonus: 1,
+    loyaltyRecovery: 0
+  },
+  "silver-port": {
+    name: "Silver Port",
+    summary: "Harbor tariffs and merchant houses enrich the court.",
+    goldBonus: 2,
+    defenseBonus: 0,
+    stabilityBonus: 0,
+    attackBonus: 0,
+    loyaltyRecovery: 0
+  },
+  moonwell: {
+    name: "Moonwell",
+    summary: "Sacred waters steady omens, courts, and loyalties.",
+    goldBonus: 0,
+    defenseBonus: 0,
+    stabilityBonus: 2,
+    attackBonus: 0,
+    loyaltyRecovery: 1
+  },
+  "ancient-forge": {
+    name: "Ancient Forge",
+    summary: "Old war furnaces temper discipline and sharpen campaigns.",
+    goldBonus: 0,
+    defenseBonus: 1,
+    stabilityBonus: 0,
+    attackBonus: 2,
+    loyaltyRecovery: 0
+  }
+};
+
+// The full prototype state is kept in plain data so the file remains easy to extend later.
 const state = {
   turn: 1,
-  directiveIndex: 0,
+  treasury: 24,
+  directiveId: "development",
   selectedRegionId: "obsidian-crown",
+  selectedAttackTargetId: null,
+  attackUsedThisTurn: false,
+  gameWon: false,
+  activatedAbilities: {},
+  activeEffects: {},
   regions: [
     {
       id: "obsidian-crown",
@@ -22,7 +86,8 @@ const state = {
       baseGold: 6,
       baseDefense: 14,
       baseStability: 8,
-      neighbors: ["silvermere", "thornwatch", "veilmere"]
+      neighbors: ["silvermere", "thornwatch", "veilmere"],
+      landmark: "sky-citadel"
     },
     {
       id: "silvermere",
@@ -34,7 +99,8 @@ const state = {
       baseGold: 11,
       baseDefense: 6,
       baseStability: 9,
-      neighbors: ["obsidian-crown", "veilmere", "ashen-plains"]
+      neighbors: ["obsidian-crown", "veilmere", "ashen-plains"],
+      landmark: "silver-port"
     },
     {
       id: "thornwatch",
@@ -46,7 +112,8 @@ const state = {
       baseGold: 5,
       baseDefense: 12,
       baseStability: 7,
-      neighbors: ["obsidian-crown", "veilmere", "starfall-bastion"]
+      neighbors: ["obsidian-crown", "veilmere", "starfall-bastion"],
+      landmark: "ancient-forge"
     },
     {
       id: "veilmere",
@@ -58,7 +125,8 @@ const state = {
       baseGold: 7,
       baseDefense: 7,
       baseStability: 10,
-      neighbors: ["obsidian-crown", "silvermere", "thornwatch", "ashen-plains", "moonfall-sanctum"]
+      neighbors: ["obsidian-crown", "silvermere", "thornwatch", "ashen-plains", "moonfall-sanctum"],
+      landmark: "moonwell"
     },
     {
       id: "ashen-plains",
@@ -70,7 +138,8 @@ const state = {
       baseGold: 12,
       baseDefense: 5,
       baseStability: 6,
-      neighbors: ["silvermere", "veilmere", "moonfall-sanctum"]
+      neighbors: ["silvermere", "veilmere", "moonfall-sanctum"],
+      landmark: null
     },
     {
       id: "starfall-bastion",
@@ -82,7 +151,8 @@ const state = {
       baseGold: 4,
       baseDefense: 15,
       baseStability: 8,
-      neighbors: ["thornwatch", "moonfall-sanctum"]
+      neighbors: ["thornwatch", "moonfall-sanctum"],
+      landmark: "sky-citadel"
     },
     {
       id: "moonfall-sanctum",
@@ -94,7 +164,8 @@ const state = {
       baseGold: 6,
       baseDefense: 8,
       baseStability: 11,
-      neighbors: ["veilmere", "ashen-plains", "starfall-bastion"]
+      neighbors: ["veilmere", "ashen-plains", "starfall-bastion"],
+      landmark: "moonwell"
     }
   ],
   characters: [
@@ -106,10 +177,13 @@ const state = {
       intellect: 7,
       charisma: 9,
       will: 8,
-      loyalty: 7,
+      loyalty: 78,
       trait: "Silver-Tongued Regent",
       abilityName: "Golden Tithes",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "While assigned to a wealth province, gain +3 gold.",
+      friends: ["lysandra-crow", "tiber-halcyon"],
+      rivals: ["merek-ashfall"]
     },
     {
       id: "dorian-blacktide",
@@ -119,10 +193,13 @@ const state = {
       intellect: 5,
       charisma: 4,
       will: 8,
-      loyalty: 8,
+      loyalty: 71,
       trait: "Siege-Born Commander",
       abilityName: "March of Iron",
-      abilityType: "active"
+      abilityType: "active",
+      abilityText: "Once per turn, the assigned province gains +4 attack for its next assault.",
+      friends: ["kael-thorn"],
+      rivals: ["lysandra-crow"]
     },
     {
       id: "elowen-pyre",
@@ -132,10 +209,13 @@ const state = {
       intellect: 9,
       charisma: 6,
       will: 9,
-      loyalty: 6,
+      loyalty: 66,
       trait: "Starfire Oracle",
       abilityName: "Astral Census",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "While assigned to a mystic province, gain +1 gold and +2 stability.",
+      friends: ["ysra-moonveil"],
+      rivals: ["brannoc-voss"]
     },
     {
       id: "kael-thorn",
@@ -145,10 +225,13 @@ const state = {
       intellect: 6,
       charisma: 5,
       will: 8,
-      loyalty: 9,
+      loyalty: 88,
       trait: "Frontier Sentinel",
       abilityName: "Border Wards",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "Gain +3 defense as governor, or +1 as assistant, in any province.",
+      friends: ["dorian-blacktide", "brannoc-voss"],
+      rivals: ["lysandra-crow"]
     },
     {
       id: "merek-ashfall",
@@ -158,10 +241,13 @@ const state = {
       intellect: 7,
       charisma: 7,
       will: 6,
-      loyalty: 5,
+      loyalty: 58,
       trait: "Ambitious Warmaster",
       abilityName: "Scorch Banner",
-      abilityType: "active"
+      abilityType: "active",
+      abilityText: "Once per turn, the assigned province gains +3 attack and +1 muster for assaults this turn.",
+      friends: [],
+      rivals: ["seraphine-vale", "tiber-halcyon"]
     },
     {
       id: "ysra-moonveil",
@@ -171,10 +257,13 @@ const state = {
       intellect: 8,
       charisma: 7,
       will: 10,
-      loyalty: 8,
+      loyalty: 84,
       trait: "Keeper of Omens",
       abilityName: "Moonlit Court",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "The assigned province gains +2 stability, and Moonwell provinces recover extra loyalty.",
+      friends: ["elowen-pyre"],
+      rivals: ["merek-ashfall"]
     },
     {
       id: "brannoc-voss",
@@ -184,10 +273,13 @@ const state = {
       intellect: 6,
       charisma: 4,
       will: 7,
-      loyalty: 9,
+      loyalty: 80,
       trait: "Stone Oath Veteran",
       abilityName: "Stone Ledger",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "While assigned to a fortress province, gain +3 defense.",
+      friends: ["kael-thorn"],
+      rivals: ["elowen-pyre", "lysandra-crow"]
     },
     {
       id: "lysandra-crow",
@@ -197,10 +289,13 @@ const state = {
       intellect: 7,
       charisma: 8,
       will: 6,
-      loyalty: 7,
+      loyalty: 69,
       trait: "Whispercourt Diplomat",
       abilityName: "Veiled Envoys",
-      abilityType: "active"
+      abilityType: "active",
+      abilityText: "Once per turn, the assigned province ignores rivalry penalties and gains +2 stability this turn.",
+      friends: ["seraphine-vale"],
+      rivals: ["dorian-blacktide", "kael-thorn", "brannoc-voss"]
     },
     {
       id: "tiber-halcyon",
@@ -210,10 +305,13 @@ const state = {
       intellect: 6,
       charisma: 8,
       will: 7,
-      loyalty: 8,
+      loyalty: 76,
       trait: "Harvest Magistrate",
       abilityName: "Harvest Decree",
-      abilityType: "passive"
+      abilityType: "passive",
+      abilityText: "While assigned to a wealth province, gain +2 gold and +1 stability.",
+      friends: ["seraphine-vale"],
+      rivals: ["merek-ashfall"]
     }
   ],
   log: []
@@ -221,61 +319,138 @@ const state = {
 
 const elements = {
   turnNumber: document.querySelector("#turn-number"),
-  currentDirective: document.querySelector("#current-directive"),
+  treasuryValue: document.querySelector("#treasury-value"),
+  ownedCount: document.querySelector("#owned-count"),
+  currentDirectiveName: document.querySelector("#current-directive-name"),
+  currentDirectiveCopy: document.querySelector("#current-directive-copy"),
+  directiveControls: document.querySelector("#directive-controls"),
   selectedRegionStatus: document.querySelector("#selected-region-status"),
   regionList: document.querySelector("#region-list"),
   regionDetail: document.querySelector("#region-detail"),
   characterRoster: document.querySelector("#character-roster"),
   eventLog: document.querySelector("#event-log"),
+  turnSummary: document.querySelector("#turn-summary"),
+  victoryBanner: document.querySelector("#victory-banner"),
   endTurnButton: document.querySelector("#end-turn-button")
 };
 
-// Initialize static data, bind UI events, and paint the first frame.
+// Boot the prototype with seeded logs and a valid default attack target.
 function init() {
   addLogEntry("The Chosen banner rises over Obsidian Crown and Silvermere.", "system");
-  addLogEntry(`Directive received: ${getCurrentDirective()}`, "directive");
+  addLogEntry(`Directive chosen: ${getCurrentDirective().name}.`, "directive");
+  addLogEntry("One assault may be launched each turn against an adjacent neutral province.", "system");
+  ensureSelectedAttackTarget();
   bindEvents();
   render();
 }
 
 function bindEvents() {
-  elements.regionList.addEventListener("click", (event) => {
-    const card = event.target.closest("[data-region-id]");
-    if (!card) {
-      return;
-    }
-
-    state.selectedRegionId = card.dataset.regionId;
-    render();
-  });
-
-  elements.regionDetail.addEventListener("change", (event) => {
-    const select = event.target.closest("select[data-role]");
-    if (!select) {
-      return;
-    }
-
-    updateAssignment(select.dataset.regionId, select.dataset.role, select.value || null);
-  });
-
+  elements.regionList.addEventListener("click", handleRegionListClick);
+  elements.directiveControls.addEventListener("click", handleDirectiveClick);
+  elements.regionDetail.addEventListener("change", handleRegionDetailChange);
+  elements.regionDetail.addEventListener("click", handleRegionDetailClick);
   elements.endTurnButton.addEventListener("click", endTurn);
 }
 
+function handleRegionListClick(event) {
+  const card = event.target.closest("[data-region-id]");
+  if (!card) {
+    return;
+  }
+
+  state.selectedRegionId = card.dataset.regionId;
+  ensureSelectedAttackTarget();
+  render();
+}
+
+function handleDirectiveClick(event) {
+  const button = event.target.closest("[data-directive-id]");
+  if (!button || state.gameWon) {
+    return;
+  }
+
+  setDirective(button.dataset.directiveId);
+}
+
+function handleRegionDetailChange(event) {
+  const appointmentSelect = event.target.closest("select[data-role]");
+  if (appointmentSelect) {
+    updateAssignment(
+      appointmentSelect.dataset.regionId,
+      appointmentSelect.dataset.role,
+      appointmentSelect.value || null
+    );
+    return;
+  }
+
+  const targetSelect = event.target.closest("select[data-attack-target]");
+  if (targetSelect) {
+    state.selectedAttackTargetId = targetSelect.value || null;
+    render();
+  }
+}
+
+function handleRegionDetailClick(event) {
+  const targetButton = event.target.closest("[data-select-target-id]");
+  if (targetButton) {
+    state.selectedAttackTargetId = targetButton.dataset.selectTargetId;
+    render();
+    return;
+  }
+
+  const abilityButton = event.target.closest("[data-activate-ability-id]");
+  if (abilityButton) {
+    activateAbility(abilityButton.dataset.activateAbilityId);
+    return;
+  }
+
+  const attackButton = event.target.closest("[data-action='attack']");
+  if (attackButton) {
+    launchAttack();
+  }
+}
+
 function render() {
-  elements.turnNumber.textContent = String(state.turn);
-  elements.currentDirective.textContent = getCurrentDirective();
+  renderTopBar();
+  renderDirectiveControls();
   renderRegionList();
   renderRegionDetail();
   renderCharacterRoster();
   renderLog();
+  renderTurnPanel();
+}
+
+function renderTopBar() {
+  elements.turnNumber.textContent = String(state.turn);
+  elements.treasuryValue.textContent = String(state.treasury);
+  elements.ownedCount.textContent = `${getOwnedRegions().length} / ${state.regions.length}`;
+  elements.currentDirectiveName.textContent = getCurrentDirective().name;
+  elements.currentDirectiveCopy.textContent = getCurrentDirective().summary;
+}
+
+function renderDirectiveControls() {
+  elements.directiveControls.innerHTML = Object.values(DIRECTIVES)
+    .map((directive) => `
+      <button
+        class="directive-button ${directive.id === state.directiveId ? "active" : ""}"
+        type="button"
+        data-directive-id="${directive.id}"
+      >
+        <span class="mini-label">Directive</span>
+        <strong>${directive.name}</strong>
+      </button>
+    `)
+    .join("");
 }
 
 function renderRegionList() {
   elements.regionList.innerHTML = state.regions
     .map((region) => {
-      const stats = computeRegionStats(region);
+      const output = computeRegionOutput(region);
       const governor = getCharacterById(region.governorId);
       const assistant = getCharacterById(region.assistantId);
+      const neutralNeighbors = region.neighbors.filter((neighborId) => getRegionById(neighborId).owner === "neutral");
+      const landmark = getLandmark(region.landmark);
 
       return `
         <button
@@ -293,6 +468,10 @@ function renderRegionList() {
 
           <div class="region-card-meta">
             <div class="field-row">
+              <span class="mini-label">Landmark</span>
+              <span>${landmark ? landmark.name : "None"}</span>
+            </div>
+            <div class="field-row">
               <span class="mini-label">Governor</span>
               <span>${governor ? governor.name : "Unassigned"}</span>
             </div>
@@ -303,9 +482,14 @@ function renderRegionList() {
           </div>
 
           <div class="summary-row">
-            <span>Gold ${stats.gold}</span>
-            <span>Defense ${stats.defense}</span>
-            <span>Stability ${stats.stability}</span>
+            <span>Gold ${output.gold.total}</span>
+            <span>Defense ${output.defense.total}</span>
+            <span>Stability ${output.stability.total}</span>
+          </div>
+
+          <div class="field-row region-card-footer">
+            <span class="mini-label">Neutral neighbors</span>
+            <span>${neutralNeighbors.length}</span>
           </div>
         </button>
       `;
@@ -315,60 +499,69 @@ function renderRegionList() {
 
 function renderRegionDetail() {
   const region = getSelectedRegion();
-  const stats = computeRegionStats(region);
+  const output = computeRegionOutput(region);
   const governor = getCharacterById(region.governorId);
   const assistant = getCharacterById(region.assistantId);
+  const relationship = getRelationshipInfo(region);
+  const attackTargets = getAttackTargets(region);
+  const selectedTarget = getRegionById(state.selectedAttackTargetId);
+  const preview = canPreviewAttack(region, selectedTarget) ? computeCombatPreview(region, selectedTarget) : null;
 
   elements.selectedRegionStatus.textContent =
     region.owner === "player"
-      ? "Player-held domain with appointments under your authority"
-      : "Neutral land. Conquest systems can connect here later";
+      ? "Player-held domain with full control over court assignments, abilities, and invasions"
+      : "Neutral province. Review its defenses and approach from a neighboring holding";
 
   elements.regionDetail.innerHTML = `
     <section class="detail-hero">
-      <div class="detail-kicker">${labelForType(region.type)} province</div>
-      <div class="detail-badge-row">
-        <h3>${region.name}</h3>
+      <div class="detail-hero-top">
+        <div>
+          <div class="detail-kicker">${labelForType(region.type)} province</div>
+          <h3>${region.name}</h3>
+        </div>
         <div class="detail-badge-row">
           <span class="status-badge ${region.owner}">${region.owner === "player" ? "Player control" : "Neutral control"}</span>
           <span class="type-badge ${region.type}">${labelForType(region.type)}</span>
+          ${region.landmark ? `<span class="detail-pill">${getLandmark(region.landmark).name}</span>` : ""}
         </div>
       </div>
       <p class="detail-copy">${getRegionDescription(region)}</p>
+      <div class="detail-meta-grid">
+        <div class="meta-card">
+          <div class="mini-label">Landmark effect</div>
+          <div class="detail-copy">${region.landmark ? getLandmark(region.landmark).summary : "No landmark bonus is active here."}</div>
+        </div>
+        <div class="meta-card">
+          <div class="mini-label">Neighbors</div>
+          <div class="neighbor-list">${renderNeighborChips(region)}</div>
+        </div>
+      </div>
     </section>
 
     <section class="section-block">
       <div class="section-header">
         <h4>Derived Output</h4>
-        <p>Base province values are enhanced by the personalities assigned to rule it.</p>
+        <p>These values are used during end-turn resolution. Every modifier stays visible in the formula list.</p>
       </div>
-      <div class="stat-grid">
-        ${renderStatCard("Gold", stats.gold, region.baseGold)}
-        ${renderStatCard("Defense", stats.defense, region.baseDefense)}
-        ${renderStatCard("Stability", stats.stability, region.baseStability)}
+      <div class="stat-grid detailed">
+        ${renderDetailedStatCard("Gold", output.gold)}
+        ${renderDetailedStatCard("Defense", output.defense)}
+        ${renderDetailedStatCard("Stability", output.stability)}
       </div>
     </section>
 
     <section class="section-block">
       <div class="section-header">
-        <h4>Province Brief</h4>
-        <p>Each territory has a distinct strategic pressure based on its type and borders.</p>
+        <h4>Court Dynamics</h4>
+        <p>Friends in the same region grant bonuses. Rivals impose penalties unless an effect suppresses them.</p>
       </div>
-      <div class="command-grid">
-        <div class="meta-card">
-          <div class="mini-label">Neighbors</div>
-          <div class="neighbor-list">${renderNeighborChips(region)}</div>
-        </div>
-        <div class="meta-card">
-          <div class="mini-label">Governance</div>
-          <div class="detail-copy">
-            ${region.owner === "player"
-              ? region.governorId
-                ? "A governor is installed. This seat may still take one assistant."
-                : "This region lacks a governor and will block the end of the turn."
-              : "Neutral seats cannot receive appointments until conquest is added."}
-          </div>
-        </div>
+      <div class="relationship-banner ${relationship.kind}">
+        <strong>${relationship.title}</strong>
+        <span>${relationship.summary}</span>
+      </div>
+      <div class="dynamics-grid">
+        ${renderLoyaltyCard("Governor", governor)}
+        ${renderLoyaltyCard("Assistant", assistant)}
       </div>
     </section>
 
@@ -378,7 +571,7 @@ function renderRegionDetail() {
           <section class="section-block">
             <div class="section-header">
               <h4>Appointments</h4>
-              <p>Governors are mandatory for owned regions. Assistants are optional.</p>
+              <p>Every owned province needs a governor before the turn may end. Assistants remain optional.</p>
             </div>
             <div class="assignment-grid">
               <div class="assignment-slot">
@@ -401,33 +594,290 @@ function renderRegionDetail() {
               </div>
             </div>
           </section>
+
+          <section class="section-block">
+            <div class="section-header">
+              <h4>Active Abilities</h4>
+              <p>Active powers are manual, once per officer per turn, and remain in effect until the turn ends.</p>
+            </div>
+            <div class="ability-grid">
+              ${renderAbilitySection(region)}
+            </div>
+          </section>
+
+          <section class="section-block">
+            <div class="section-header">
+              <h4>Conquest</h4>
+              <p>One assault may be launched each turn from a player-owned region into an adjacent neutral province.</p>
+            </div>
+            ${renderConquestSection(region, attackTargets, selectedTarget, preview)}
+          </section>
         `
         : `
-          <section class="empty-state">
-            <div class="mini-label">No appointments available</div>
-            <p class="empty-copy">
-              Neutral regions are shown with full data now so future conquest systems can plug into
-              the same panel without redesigning the UI.
-            </p>
+          <section class="section-block">
+            <div class="section-header">
+              <h4>Approach</h4>
+              <p>Neutral provinces cannot be staffed yet, but their defenses and attack routes are already visible.</p>
+            </div>
+            <div class="command-grid">
+              <div class="meta-card">
+                <div class="mini-label">Attackable from</div>
+                <div class="neighbor-list">${renderPlayerNeighborChips(region)}</div>
+              </div>
+              <div class="meta-card">
+                <div class="mini-label">Defense posture</div>
+                <div class="detail-copy">
+                  Base defense, province type, landmark bonuses, and any future defenders all stack here.
+                </div>
+              </div>
+            </div>
           </section>
         `
     }
 
     ${region.owner === "player" && !region.governorId ? `
       <div class="warning-strip">
-        Imperial law requires every owned region to have a governor before the next turn can begin.
+        Imperial law requires every owned province to have a governor before the next turn can begin.
       </div>
     ` : ""}
   `;
 }
 
+function renderDetailedStatCard(label, stat) {
+  return `
+    <article class="stat-card detailed">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value">${stat.total}</div>
+      <div class="formula-list">
+        ${stat.lines.map((line) => renderFormulaLine(line)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderFormulaLine(line) {
+  return `
+    <div class="formula-line ${line.value < 0 ? "negative" : "positive"}">
+      <span>${line.label}</span>
+      <strong>${formatSignedValue(line.value)}</strong>
+    </div>
+  `;
+}
+
+function renderLoyaltyCard(role, character) {
+  if (!character) {
+    return `
+      <article class="loyalty-card empty">
+        <div class="mini-label">${role}</div>
+        <div class="card-status">No officer assigned.</div>
+      </article>
+    `;
+  }
+
+  const band = getLoyaltyBand(character.loyalty);
+
+  return `
+    <article class="loyalty-card">
+      <div class="field-row">
+        <span class="mini-label">${role}</span>
+        <span class="loyalty-label ${band.className}">${band.label}</span>
+      </div>
+      <div class="post-name">${character.name}</div>
+      <div class="loyalty-track">
+        <div class="loyalty-fill ${band.className}" style="width: ${character.loyalty}%"></div>
+      </div>
+      <div class="field-row">
+        <span class="mini-label">Loyalty</span>
+        <span>${character.loyalty}</span>
+      </div>
+      <div class="card-status">${band.summary}</div>
+    </article>
+  `;
+}
+
+function renderAbilitySection(region) {
+  const officers = [region.governorId, region.assistantId]
+    .map((characterId) => getCharacterById(characterId))
+    .filter(Boolean);
+  const activeOfficers = officers.filter((character) => character.abilityType === "active");
+
+  if (activeOfficers.length === 0) {
+    return `
+      <article class="empty-state">
+        <div class="mini-label">No active powers here</div>
+        <p class="empty-copy">Assign a character with an active ability to this province to unlock manual powers.</p>
+      </article>
+    `;
+  }
+
+  return activeOfficers.map((character) => renderAbilityCard(character, region)).join("");
+}
+
+function renderAbilityCard(character, region) {
+  const isUsed = Boolean(state.activatedAbilities[character.id]);
+  const effect = getRegionEffect(region.id);
+  const bonusText = effect.notes.length ? effect.notes.join(" ") : "No temporary effect active in this province.";
+
+  return `
+    <article class="ability-card">
+      <div class="field-row">
+        <div>
+          <div class="post-name">${character.name}</div>
+          <div class="card-trait">${character.abilityName}</div>
+        </div>
+        <span class="ability-badge active">${isUsed ? "spent" : "ready"}</span>
+      </div>
+      <p class="card-status">${character.abilityText}</p>
+      <p class="field-copy">${bonusText}</p>
+      <button
+        class="action-button secondary"
+        type="button"
+        data-activate-ability-id="${character.id}"
+        ${isUsed || state.gameWon ? "disabled" : ""}
+      >
+        ${isUsed ? "Already Used" : "Activate Power"}
+      </button>
+    </article>
+  `;
+}
+
+function renderConquestSection(region, attackTargets, selectedTarget, preview) {
+  if (state.gameWon) {
+    return `
+      <div class="empty-state">
+        <div class="mini-label">Empire complete</div>
+        <p class="empty-copy">Every province has fallen under your banner. The campaign is won.</p>
+      </div>
+    `;
+  }
+
+  if (!region.governorId) {
+    return `
+      <div class="warning-strip">
+        This province cannot launch an assault without a governor.
+      </div>
+    `;
+  }
+
+  if (state.attackUsedThisTurn) {
+    return `
+      <div class="empty-state">
+        <div class="mini-label">Assault already used</div>
+        <p class="empty-copy">Only one conquest action is available each turn. End the turn to launch another campaign.</p>
+      </div>
+    `;
+  }
+
+  if (attackTargets.length === 0) {
+    return `
+      <div class="empty-state">
+        <div class="mini-label">No adjacent neutral targets</div>
+        <p class="empty-copy">Choose another owned province if you want to continue the conquest this turn.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="target-grid">
+      ${attackTargets.map((target) => renderTargetCard(region, target)).join("")}
+    </div>
+    <div class="field-row">
+      <span class="mini-label">Selected target</span>
+      <select data-attack-target>
+        ${renderAttackTargetOptions(region)}
+      </select>
+    </div>
+    ${
+      selectedTarget && preview
+        ? `
+          <div class="combat-preview">
+            <div class="combat-column">
+              <div class="field-row">
+                <div>
+                  <div class="mini-label">Attack power</div>
+                  <div class="stat-value combat">${preview.attack.total}</div>
+                </div>
+                <span class="outlook-chip ${preview.outlook.className}">${preview.outlook.label}</span>
+              </div>
+              <div class="formula-list">
+                ${preview.attack.lines.map((line) => renderFormulaLine(line)).join("")}
+              </div>
+            </div>
+            <div class="combat-column">
+              <div class="mini-label">Defense power</div>
+              <div class="stat-value combat">${preview.defense.total}</div>
+              <div class="formula-list">
+                ${preview.defense.lines.map((line) => renderFormulaLine(line)).join("")}
+              </div>
+            </div>
+          </div>
+          <div class="field-row combat-footer">
+            <p class="field-copy">
+              ${preview.outlook.copy}
+            </p>
+            <button class="action-button" type="button" data-action="attack">Launch Assault</button>
+          </div>
+        `
+        : ""
+    }
+  `;
+}
+
+function renderTargetCard(attackerRegion, targetRegion) {
+  const preview = computeCombatPreview(attackerRegion, targetRegion);
+  const selected = targetRegion.id === state.selectedAttackTargetId;
+
+  return `
+    <button
+      class="target-card ${selected ? "selected" : ""}"
+      type="button"
+      data-select-target-id="${targetRegion.id}"
+    >
+      <div class="field-row">
+        <div>
+          <div class="post-name">${targetRegion.name}</div>
+          <div class="meta-line">${labelForType(targetRegion.type)} province</div>
+        </div>
+        <span class="type-badge ${targetRegion.type}">${labelForType(targetRegion.type)}</span>
+      </div>
+      <div class="summary-row">
+        <span>Attack ${preview.attack.total}</span>
+        <span>Defense ${preview.defense.total}</span>
+      </div>
+      <div class="card-status">${preview.outlook.label}: ${preview.outlook.copy}</div>
+    </button>
+  `;
+}
+
+function renderAttackTargetOptions(region) {
+  const targets = getAttackTargets(region);
+  return targets
+    .map((target) => `
+      <option value="${target.id}" ${target.id === state.selectedAttackTargetId ? "selected" : ""}>
+        ${target.name}
+      </option>
+    `)
+    .join("");
+}
+
 function renderCharacterRoster() {
   const selectedRegion = getSelectedRegion();
+  const sortedCharacters = state.characters.slice().sort((left, right) => {
+    const leftAssigned = getCharacterAssignment(left.id) ? 0 : 1;
+    const rightAssigned = getCharacterAssignment(right.id) ? 0 : 1;
 
-  elements.characterRoster.innerHTML = state.characters
+    if (leftAssigned !== rightAssigned) {
+      return leftAssigned - rightAssigned;
+    }
+
+    return right.loyalty - left.loyalty;
+  });
+
+  elements.characterRoster.innerHTML = sortedCharacters
     .map((character) => {
       const assignment = getCharacterAssignment(character.id);
       const stationedHere = assignment && assignment.regionId === selectedRegion.id;
+      const loyaltyBand = getLoyaltyBand(character.loyalty);
 
       return `
         <article class="character-card ${assignment ? "is-assigned" : ""} ${stationedHere ? "is-selected-station" : ""}">
@@ -441,11 +891,31 @@ function renderCharacterRoster() {
             </div>
             <span class="ability-badge ${character.abilityType}">${character.abilityType}</span>
           </div>
+
           <div class="field-row">
             <span class="mini-label">Ability</span>
             <span>${character.abilityName}</span>
           </div>
+
+          <div class="field-row">
+            <span class="mini-label">Loyalty</span>
+            <span class="loyalty-label ${loyaltyBand.className}">${character.loyalty} ${loyaltyBand.label}</span>
+          </div>
+          <div class="loyalty-track compact">
+            <div class="loyalty-fill ${loyaltyBand.className}" style="width: ${character.loyalty}%"></div>
+          </div>
+
           <p class="card-status">${describeAssignment(character)}</p>
+
+          <div class="tag-row">
+            <span class="mini-label">Friends</span>
+            ${renderRelationChips(character.friends, "friend")}
+          </div>
+          <div class="tag-row">
+            <span class="mini-label">Rivals</span>
+            ${renderRelationChips(character.rivals, "rival")}
+          </div>
+
           <div class="roster-stats">
             ${renderRosterStat("Might", character.might)}
             ${renderRosterStat("Intel", character.intellect)}
@@ -476,6 +946,37 @@ function renderLog() {
     .join("");
 }
 
+function renderTurnPanel() {
+  const assignedCount = getAssignedCharacters().length;
+  const attackState = state.attackUsedThisTurn ? "assault spent" : "assault ready";
+  const directive = getCurrentDirective().name;
+
+  elements.turnSummary.textContent = `Directive: ${directive}. ${assignedCount} officers are currently assigned. This turn's conquest action is ${attackState}.`;
+
+  if (state.gameWon) {
+    elements.victoryBanner.hidden = false;
+    elements.victoryBanner.textContent = `Victory: every province now serves the empire. Final treasury: ${state.treasury}.`;
+    elements.endTurnButton.disabled = true;
+    elements.endTurnButton.textContent = "Empire Complete";
+  } else {
+    elements.victoryBanner.hidden = true;
+    elements.victoryBanner.textContent = "";
+    elements.endTurnButton.disabled = false;
+    elements.endTurnButton.textContent = "End Turn";
+  }
+}
+
+function setDirective(directiveId) {
+  if (!DIRECTIVES[directiveId] || directiveId === state.directiveId) {
+    return;
+  }
+
+  state.directiveId = directiveId;
+  addLogEntry(`Directive chosen: ${getCurrentDirective().name}.`, "directive");
+  ensureSelectedAttackTarget();
+  render();
+}
+
 function updateAssignment(regionId, role, nextCharacterId) {
   const region = getRegionById(regionId);
   if (!region || region.owner !== "player") {
@@ -491,7 +992,7 @@ function updateAssignment(regionId, role, nextCharacterId) {
   }
 
   if (nextCharacterId && region[otherKey] === nextCharacterId) {
-    addLogEntry("A character cannot hold both offices in the same region.", "warning");
+    addLogEntry("A single character cannot serve as both governor and assistant in the same province.", "warning");
     render();
     return;
   }
@@ -499,7 +1000,7 @@ function updateAssignment(regionId, role, nextCharacterId) {
   if (nextCharacterId) {
     const currentPost = getCharacterAssignment(nextCharacterId);
     if (currentPost && !(currentPost.regionId === regionId && currentPost.role === role)) {
-      addLogEntry(`${getCharacterById(nextCharacterId).name} must be unassigned before taking a new office.`, "warning");
+      addLogEntry(`${getCharacterById(nextCharacterId).name} must first be released from ${getRegionById(currentPost.regionId).name}.`, "warning");
       render();
       return;
     }
@@ -517,85 +1018,377 @@ function updateAssignment(regionId, role, nextCharacterId) {
     addLogEntry(`${region.name} now stands without a ${role}.`, "warning");
   }
 
+  ensureSelectedAttackTarget();
+  render();
+}
+
+function activateAbility(characterId) {
+  const character = getCharacterById(characterId);
+  const assignment = getCharacterAssignment(characterId);
+
+  if (!character || !assignment || character.abilityType !== "active" || state.activatedAbilities[characterId] || state.gameWon) {
+    return;
+  }
+
+  const region = getRegionById(assignment.regionId);
+  const effect = getOrCreateRegionEffect(region.id);
+
+  switch (character.id) {
+    case "dorian-blacktide":
+      effect.attackBonus += 4;
+      effect.notes.push("March of Iron grants +4 attack.");
+      break;
+    case "merek-ashfall":
+      effect.attackBonus += 3;
+      effect.musterBonus += 1;
+      effect.notes.push("Scorch Banner grants +3 attack and +1 muster.");
+      break;
+    case "lysandra-crow":
+      effect.stabilityBonus += 2;
+      effect.ignoreRivalry = true;
+      effect.notes.push("Veiled Envoys grants +2 stability and suppresses rivalry.");
+      break;
+    default:
+      return;
+  }
+
+  state.activatedAbilities[characterId] = state.turn;
+  addLogEntry(`${character.name} activates ${character.abilityName} in ${region.name}.`, "system");
+  render();
+}
+
+function launchAttack() {
+  const attacker = getSelectedRegion();
+  const defender = getRegionById(state.selectedAttackTargetId);
+
+  if (!canPreviewAttack(attacker, defender) || state.attackUsedThisTurn || state.gameWon) {
+    return;
+  }
+
+  if (!attacker.governorId) {
+    addLogEntry(`${attacker.name} needs a governor before it can lead an assault.`, "warning");
+    render();
+    return;
+  }
+
+  const preview = computeCombatPreview(attacker, defender);
+  state.attackUsedThisTurn = true;
+
+  if (preview.attack.total >= preview.defense.total) {
+    defender.owner = "player";
+    defender.governorId = null;
+    defender.assistantId = null;
+
+    adjustPostBattleLoyalty(attacker, 4);
+    addLogEntry(
+      `${attacker.name} conquers ${defender.name} with ${preview.attack.total} attack against ${preview.defense.total} defense.`,
+      "battle"
+    );
+    addLogEntry(`${defender.name} joins the empire but still requires a governor.`, "system");
+
+    state.selectedRegionId = defender.id;
+    ensureSelectedAttackTarget();
+
+    if (checkVictory()) {
+      state.gameWon = true;
+      addLogEntry("All provinces now bow to the Chosen. The campaign is won.", "victory");
+    }
+  } else {
+    adjustPostBattleLoyalty(attacker, -5);
+    addLogEntry(
+      `${attacker.name} fails to take ${defender.name}. The assault breaks at ${preview.attack.total} attack against ${preview.defense.total} defense.`,
+      "battle"
+    );
+  }
+
   render();
 }
 
 function endTurn() {
-  const missingGovernor = state.regions.find(
-    (region) => region.owner === "player" && !region.governorId
-  );
+  if (state.gameWon) {
+    return;
+  }
 
+  const missingGovernor = state.regions.find((region) => region.owner === "player" && !region.governorId);
   if (missingGovernor) {
     addLogEntry(`${missingGovernor.name} must receive a governor before the turn can end.`, "warning");
     render();
     return;
   }
 
-  const holdings = state.regions.filter((region) => region.owner === "player");
-  const reports = holdings.map((region) => ({
+  const ownedRegions = getOwnedRegions();
+  const outputs = ownedRegions.map((region) => ({
     region,
-    stats: computeRegionStats(region)
+    output: computeRegionOutput(region)
   }));
+  const totalGold = outputs.reduce((sum, entry) => sum + entry.output.gold.total, 0);
+  const lowestStability = outputs.reduce((lowest, entry) =>
+    !lowest || entry.output.stability.total < lowest.output.stability.total ? entry : lowest
+  , null);
+  const highestDefense = outputs.reduce((best, entry) =>
+    !best || entry.output.defense.total > best.output.defense.total ? entry : best
+  , null);
 
-  const totalGold = reports.reduce((sum, entry) => sum + entry.stats.gold, 0);
-  const weakestBorder = reports.reduce((lowest, entry) =>
-    !lowest || entry.stats.defense < lowest.stats.defense ? entry : lowest
-  , null);
-  const mostTense = reports.reduce((lowest, entry) =>
-    !lowest || entry.stats.stability < lowest.stats.stability ? entry : lowest
-  , null);
+  state.treasury += totalGold;
+  resolveLoyaltyChanges(outputs);
 
   state.turn += 1;
-  state.directiveIndex = (state.directiveIndex + 1) % directives.length;
+  state.attackUsedThisTurn = false;
+  state.activatedAbilities = {};
+  state.activeEffects = {};
+  ensureSelectedAttackTarget();
 
-  addLogEntry(`Revenue caravans deliver ${totalGold} gold to the imperial vaults.`, "system");
-  addLogEntry(
-    `${weakestBorder.region.name} is the softest border at ${weakestBorder.stats.defense} defense.`,
-    "warning"
-  );
-  addLogEntry(
-    `${mostTense.region.name} records the lowest stability at ${mostTense.stats.stability}.`,
-    "warning"
-  );
-  addLogEntry(`Directive received: ${getCurrentDirective()}`, "directive");
-
+  addLogEntry(`Treasury grows by ${totalGold} gold and now stands at ${state.treasury}.`, "system");
+  addLogEntry(`${highestDefense.region.name} is your strongest bastion at ${highestDefense.output.defense.total} defense.`, "system");
+  addLogEntry(`${lowestStability.region.name} is your most fragile court at ${lowestStability.output.stability.total} stability.`, "warning");
+  addLogEntry(`New turn begins under the ${getCurrentDirective().name} directive.`, "directive");
   render();
 }
 
-// Derived region values are assembled from base stats, region type, and appointments.
-function computeRegionStats(region) {
-  const totals = {
-    gold: region.baseGold,
-    defense: region.baseDefense,
-    stability: region.baseStability
+// Region output is a transparent stack of base values, province traits, officers, relationships, and temporary effects.
+function computeRegionOutput(region) {
+  const output = {
+    gold: createStat(region.baseGold, "Base province", region.baseGold),
+    defense: createStat(region.baseDefense, "Base province", region.baseDefense),
+    stability: createStat(region.baseStability, "Base province", region.baseStability)
   };
+  const landmark = getLandmark(region.landmark);
+  const effect = getRegionEffect(region.id);
+  const relationship = getRelationshipInfo(region);
 
-  if (region.type === "wealth") {
-    totals.gold += 2;
-  } else if (region.type === "fortress") {
-    totals.defense += 2;
-  } else if (region.type === "mystic") {
-    totals.stability += 2;
+  applyTypeBonuses(output, region);
+  applyLandmarkBonuses(output, landmark);
+
+  if (region.owner === "player") {
+    applyDirectiveBonuses(output, getCurrentDirective());
   }
 
-  applyCharacterContribution(totals, getCharacterById(region.governorId), region, "governor");
-  applyCharacterContribution(totals, getCharacterById(region.assistantId), region, "assistant");
+  applyOfficerGovernance(output, getCharacterById(region.governorId), region, "governor");
+  applyOfficerGovernance(output, getCharacterById(region.assistantId), region, "assistant");
 
-  return totals;
+  if (relationship.outputModifier !== 0) {
+    applyStat(output.gold, relationship.title, relationship.outputModifier);
+    applyStat(output.defense, relationship.title, relationship.outputModifier);
+    applyStat(output.stability, relationship.title, relationship.outputModifier);
+  }
+
+  if (effect.stabilityBonus) {
+    applyStat(output.stability, "Temporary effect", effect.stabilityBonus);
+  }
+
+  finalizeStat(output.gold);
+  finalizeStat(output.defense);
+  finalizeStat(output.stability);
+  return output;
 }
 
-function applyCharacterContribution(totals, character, region, role) {
+function computeCombatPreview(attackerRegion, defenderRegion) {
+  const attack = createStat(0, "No base attack", 0);
+  const defense = createStat(defenderRegion.baseDefense, "Base province", defenderRegion.baseDefense);
+  const attackerOutput = computeRegionOutput(attackerRegion);
+  const defenderOutput = computeRegionOutput(defenderRegion);
+  const attackerEffect = getRegionEffect(attackerRegion.id);
+  const attackerLandmark = getLandmark(attackerRegion.landmark);
+  const defenderLandmark = getLandmark(defenderRegion.landmark);
+  const attackerRelationship = getRelationshipInfo(attackerRegion);
+  const defenderRelationship = getRelationshipInfo(defenderRegion);
+  const governor = getCharacterById(attackerRegion.governorId);
+  const assistant = getCharacterById(attackerRegion.assistantId);
+  const defenderGovernor = getCharacterById(defenderRegion.governorId);
+  const defenderAssistant = getCharacterById(defenderRegion.assistantId);
+
+  const muster = Math.max(1, Math.floor(attackerOutput.stability.total / 4));
+  applyStat(attack, "Regional muster", muster + attackerEffect.musterBonus);
+
+  if (governor) {
+    applyStat(
+      attack,
+      `${governor.name} leads (${getLoyaltyBand(governor.loyalty).label.toLowerCase()})`,
+      getOfficerAttackContribution(governor, "governor")
+    );
+  }
+
+  if (assistant) {
+    applyStat(
+      attack,
+      `${assistant.name} supports (${getLoyaltyBand(assistant.loyalty).label.toLowerCase()})`,
+      getOfficerAttackContribution(assistant, "assistant")
+    );
+  }
+
+  if (getCurrentDirective().attackBonus) {
+    applyStat(attack, `${getCurrentDirective().name} directive`, getCurrentDirective().attackBonus);
+  }
+
+  if (attackerLandmark && attackerLandmark.attackBonus) {
+    applyStat(attack, attackerLandmark.name, attackerLandmark.attackBonus);
+  }
+
+  if (attackerEffect.attackBonus) {
+    applyStat(attack, "Temporary effect", attackerEffect.attackBonus);
+  }
+
+  if (attackerRelationship.attackModifier) {
+    applyStat(attack, attackerRelationship.title, attackerRelationship.attackModifier);
+  }
+
+  applyTypeBonuses({ gold: createStat(0, "", 0), defense, stability: createStat(0, "", 0) }, defenderRegion);
+  applyLandmarkDefense(defense, defenderLandmark);
+  applyStat(defense, "Defender readiness", Math.max(1, Math.floor(defenderOutput.stability.total / 5)));
+
+  if (defenderGovernor) {
+    applyStat(defense, `${defenderGovernor.name} commands`, getOfficerDefenseContribution(defenderGovernor, "governor"));
+  }
+
+  if (defenderAssistant) {
+    applyStat(defense, `${defenderAssistant.name} assists`, getOfficerDefenseContribution(defenderAssistant, "assistant"));
+  }
+
+  if (defenderRelationship.defenseModifier) {
+    applyStat(defense, defenderRelationship.title, defenderRelationship.defenseModifier);
+  }
+
+  finalizeStat(attack);
+  finalizeStat(defense);
+
+  return {
+    attack,
+    defense,
+    margin: attack.total - defense.total,
+    outlook: getCombatOutlook(attack.total - defense.total)
+  };
+}
+
+function resolveLoyaltyChanges(outputs) {
+  const improved = [];
+  const declined = [];
+
+  state.characters.forEach((character) => {
+    const assignment = getCharacterAssignment(character.id);
+    let delta = 0;
+
+    if (assignment) {
+      const region = getRegionById(assignment.regionId);
+      const outputEntry = outputs.find((entry) => entry.region.id === region.id);
+      const output = outputEntry ? outputEntry.output : computeRegionOutput(region);
+
+      delta += 1;
+
+      if (output.stability.total >= 15) {
+        delta += 1;
+      }
+
+      if (output.stability.total <= 8) {
+        delta -= 1;
+      }
+
+      if (state.directiveId === "stability") {
+        delta += 2;
+      }
+
+      if (state.directiveId === "development" && region.type === "wealth") {
+        delta += 1;
+      }
+
+      if (getLandmark(region.landmark)?.loyaltyRecovery) {
+        delta += getLandmark(region.landmark).loyaltyRecovery;
+      }
+    } else {
+      delta -= 1;
+    }
+
+    if (delta !== 0) {
+      const nextLoyalty = clamp(character.loyalty + delta, 0, 100);
+      const actualDelta = nextLoyalty - character.loyalty;
+      character.loyalty = nextLoyalty;
+
+      if (actualDelta > 0) {
+        improved.push(`${character.name} (+${actualDelta})`);
+      } else if (actualDelta < 0) {
+        declined.push(`${character.name} (${actualDelta})`);
+      }
+    }
+  });
+
+  if (improved.length) {
+    addLogEntry(`Loyalty rises: ${improved.join(", ")}.`, "system");
+  }
+
+  if (declined.length) {
+    addLogEntry(`Loyalty slips: ${declined.join(", ")}.`, "warning");
+  }
+}
+
+function adjustPostBattleLoyalty(region, delta) {
+  [region.governorId, region.assistantId]
+    .filter(Boolean)
+    .forEach((characterId) => {
+      const character = getCharacterById(characterId);
+      character.loyalty = clamp(character.loyalty + delta, 0, 100);
+    });
+}
+
+function applyTypeBonuses(output, region) {
+  if (region.type === "wealth") {
+    applyStat(output.gold, "Wealth province", 2);
+  } else if (region.type === "fortress") {
+    applyStat(output.defense, "Fortress province", 2);
+  } else if (region.type === "mystic") {
+    applyStat(output.stability, "Mystic province", 2);
+  }
+}
+
+function applyLandmarkBonuses(output, landmark) {
+  if (!landmark) {
+    return;
+  }
+
+  if (landmark.goldBonus) {
+    applyStat(output.gold, landmark.name, landmark.goldBonus);
+  }
+
+  if (landmark.defenseBonus) {
+    applyStat(output.defense, landmark.name, landmark.defenseBonus);
+  }
+
+  if (landmark.stabilityBonus) {
+    applyStat(output.stability, landmark.name, landmark.stabilityBonus);
+  }
+}
+
+function applyLandmarkDefense(defenseStat, landmark) {
+  if (landmark && landmark.defenseBonus) {
+    applyStat(defenseStat, landmark.name, landmark.defenseBonus);
+  }
+}
+
+function applyDirectiveBonuses(output, directive) {
+  if (directive.goldBonus) {
+    applyStat(output.gold, `${directive.name} directive`, directive.goldBonus);
+  }
+
+  if (directive.stabilityBonus) {
+    applyStat(output.stability, `${directive.name} directive`, directive.stabilityBonus);
+  }
+}
+
+function applyOfficerGovernance(output, character, region, role) {
   if (!character) {
     return;
   }
 
-  const weight = role === "governor" ? 1 : 0.55;
+  const roleWeight = role === "governor" ? 1 : 0.55;
+  const loyaltyBonus = getLoyaltyBand(character.loyalty).governanceBonus;
+  const title = role === "governor" ? `${character.name} governs` : `${character.name} assists`;
 
-  totals.gold += Math.round(((character.intellect * 0.7) + (character.charisma * 0.9)) * weight / 2);
-  totals.defense += Math.round(((character.might * 0.9) + (character.will * 0.7)) * weight / 2);
-  totals.stability += Math.round(((character.will * 0.8) + (character.loyalty * 0.7) + (character.charisma * 0.5)) * weight / 2.2);
+  const gold = Math.round(((character.intellect * 0.9) + (character.charisma * 0.8) + loyaltyBonus) * roleWeight / 2.3);
+  const defense = Math.round(((character.might * 0.95) + (character.will * 0.75) + loyaltyBonus) * roleWeight / 2.4);
+  const stability = Math.round(((character.charisma * 0.8) + (character.will * 0.7) + loyaltyBonus) * roleWeight / 2.35);
 
-  // Passive abilities contribute reliable bonuses. Active abilities are displayed for future systems.
+  applyStat(output.gold, title, gold);
+  applyStat(output.defense, title, defense);
+  applyStat(output.stability, title, stability);
+
   if (character.abilityType !== "passive") {
     return;
   }
@@ -603,30 +1396,30 @@ function applyCharacterContribution(totals, character, region, role) {
   switch (character.id) {
     case "seraphine-vale":
       if (region.type === "wealth") {
-        totals.gold += 3;
+        applyStat(output.gold, character.abilityName, 3);
       }
       break;
     case "elowen-pyre":
       if (region.type === "mystic") {
-        totals.gold += 1;
-        totals.stability += 2;
+        applyStat(output.gold, character.abilityName, 1);
+        applyStat(output.stability, character.abilityName, 2);
       }
       break;
     case "kael-thorn":
-      totals.defense += role === "governor" ? 3 : 1;
+      applyStat(output.defense, character.abilityName, role === "governor" ? 3 : 1);
       break;
     case "ysra-moonveil":
-      totals.stability += 2;
+      applyStat(output.stability, character.abilityName, 2);
       break;
     case "brannoc-voss":
       if (region.type === "fortress") {
-        totals.defense += 3;
+        applyStat(output.defense, character.abilityName, 3);
       }
       break;
     case "tiber-halcyon":
       if (region.type === "wealth") {
-        totals.gold += 2;
-        totals.stability += 1;
+        applyStat(output.gold, character.abilityName, 2);
+        applyStat(output.stability, character.abilityName, 1);
       }
       break;
     default:
@@ -634,10 +1427,27 @@ function applyCharacterContribution(totals, character, region, role) {
   }
 }
 
-// Only unassigned characters, or the character already in this slot, can appear in a dropdown.
+function getOfficerAttackContribution(character, role) {
+  const weight = role === "governor" ? 1 : 0.6;
+  const loyalty = getLoyaltyBand(character.loyalty).combatBonus;
+  return Math.max(
+    1,
+    Math.round(((character.might * 1.35) + (character.will * 0.85) + (character.charisma * 0.35)) * weight / 2 + loyalty)
+  );
+}
+
+function getOfficerDefenseContribution(character, role) {
+  const weight = role === "governor" ? 1 : 0.6;
+  const loyalty = getLoyaltyBand(character.loyalty).combatBonus;
+  return Math.max(
+    1,
+    Math.round(((character.might * 0.85) + (character.will * 1.1) + (character.intellect * 0.25)) * weight / 2 + loyalty)
+  );
+}
+
 function renderCharacterOptions(region, role) {
   const selectedId = role === "governor" ? region.governorId : region.assistantId;
-  const placeholder = role === "governor" ? "Unassigned governor" : "No assistant";
+  const placeholder = role === "governor" ? "Select governor" : "No assistant";
   const options = state.characters.filter((character) => isCharacterEligible(character.id, region, role));
 
   return [
@@ -669,6 +1479,8 @@ function renderPostCard(character, title) {
     `;
   }
 
+  const loyaltyBand = getLoyaltyBand(character.loyalty);
+
   return `
     <article class="post-card">
       <div class="post-header">
@@ -685,6 +1497,10 @@ function renderPostCard(character, title) {
         <span class="mini-label">Ability</span>
         <span>${character.abilityName}</span>
       </div>
+      <div class="field-row">
+        <span class="mini-label">Loyalty</span>
+        <span class="loyalty-label ${loyaltyBand.className}">${character.loyalty}</span>
+      </div>
       <div class="post-metrics">
         ${renderMetricPill("Mgt", character.might)}
         ${renderMetricPill("Int", character.intellect)}
@@ -692,16 +1508,6 @@ function renderPostCard(character, title) {
         ${renderMetricPill("Wil", character.will)}
         ${renderMetricPill("Loy", character.loyalty)}
       </div>
-    </article>
-  `;
-}
-
-function renderStatCard(label, value, baseValue) {
-  return `
-    <article class="stat-card">
-      <div class="stat-label">${label}</div>
-      <div class="stat-value">${value}</div>
-      <div class="mini-label">Base ${baseValue}</div>
     </article>
   `;
 }
@@ -732,48 +1538,293 @@ function renderNeighborChips(region) {
     .join("");
 }
 
+function renderPlayerNeighborChips(region) {
+  const playerNeighbors = region.neighbors
+    .map((neighborId) => getRegionById(neighborId))
+    .filter((neighbor) => neighbor && neighbor.owner === "player");
+
+  if (!playerNeighbors.length) {
+    return `<span class="neighbor-chip">None</span>`;
+  }
+
+  return playerNeighbors
+    .map((neighbor) => `<span class="neighbor-chip">${neighbor.name}</span>`)
+    .join("");
+}
+
+function renderRelationChips(characterIds, kind) {
+  if (!characterIds.length) {
+    return `<span class="relation-chip neutral">None</span>`;
+  }
+
+  return characterIds
+    .map((characterId) => {
+      const character = getCharacterById(characterId);
+      return `<span class="relation-chip ${kind}">${character ? character.name : characterId}</span>`;
+    })
+    .join("");
+}
+
 function describeAssignment(character) {
   const assignment = getCharacterAssignment(character.id);
   if (!assignment) {
-    return "Unassigned and ready for appointment.";
+    return "Unassigned and available for governance or conquest duties.";
   }
 
   const region = getRegionById(assignment.regionId);
   return `Serving as ${assignment.role} in ${region.name}.`;
 }
 
-function getRegionAssignmentCounts() {
-  return state.regions.reduce(
-    (totals, region) => {
-      if (region.owner === "player") {
-        totals.owned += 1;
-      }
-      if (region.governorId) {
-        totals.governors += 1;
-      }
-      if (region.assistantId) {
-        totals.assistants += 1;
-      }
-      return totals;
-    },
-    { owned: 0, governors: 0, assistants: 0 }
+function getRegionDescription(region) {
+  const directive = getCurrentDirective();
+  const landmark = getLandmark(region.landmark);
+  const holdings = getOwnedRegions().length;
+  const descriptionByType = {
+    wealth: `${region.name} thrives on markets, toll roads, and the appetite of rival merchants.`,
+    fortress: `${region.name} holds the marches through walls, discipline, and narrow kill-zones.`,
+    mystic: `${region.name} shapes obedience through omens, rites, and the fear of hidden powers.`
+  };
+
+  const landmarkCopy = landmark ? ` Its landmark, ${landmark.name}, grants a visible regional modifier.` : "";
+  return `${descriptionByType[region.type]}${landmarkCopy} The empire currently holds ${holdings} provinces, and the ${directive.name} directive is active.`;
+}
+
+function getRelationshipInfo(region) {
+  const governor = getCharacterById(region.governorId);
+  const assistant = getCharacterById(region.assistantId);
+  const effect = getRegionEffect(region.id);
+
+  if (!governor || !assistant) {
+    return {
+      kind: "neutral",
+      title: "No paired court effect",
+      summary: "Install both offices in this province to create friendship bonuses or rivalry penalties.",
+      outputModifier: 0,
+      attackModifier: 0,
+      defenseModifier: 0
+    };
+  }
+
+  if (governor.friends.includes(assistant.id) || assistant.friends.includes(governor.id)) {
+    return {
+      kind: "friend",
+      title: "Friends in office",
+      summary: `${governor.name} and ${assistant.name} trust one another. Governance gains +1 and attacks gain +2.`,
+      outputModifier: 1,
+      attackModifier: 2,
+      defenseModifier: 1
+    };
+  }
+
+  if (governor.rivals.includes(assistant.id) || assistant.rivals.includes(governor.id)) {
+    if (effect.ignoreRivalry) {
+      return {
+        kind: "suppressed",
+        title: "Rivalry suppressed",
+        summary: "A temporary effect is suppressing rivalry penalties in this province this turn.",
+        outputModifier: 0,
+        attackModifier: 0,
+        defenseModifier: 0
+      };
+    }
+
+    return {
+      kind: "rival",
+      title: "Rivals in office",
+      summary: `${governor.name} and ${assistant.name} undermine each other. Governance suffers -1 and attacks suffer -2.`,
+      outputModifier: -1,
+      attackModifier: -2,
+      defenseModifier: -1
+    };
+  }
+
+  return {
+    kind: "neutral",
+    title: "Professional pairing",
+    summary: "No direct friendship or rivalry modifier applies in this province.",
+    outputModifier: 0,
+    attackModifier: 0,
+    defenseModifier: 0
+  };
+}
+
+function getLoyaltyBand(loyalty) {
+  if (loyalty >= 70) {
+    return {
+      label: "steadfast",
+      className: "high",
+      governanceBonus: 2,
+      combatBonus: 2,
+      summary: "High loyalty grants small governance and combat bonuses."
+    };
+  }
+
+  if (loyalty >= 40) {
+    return {
+      label: "steady",
+      className: "mid",
+      governanceBonus: 0,
+      combatBonus: 0,
+      summary: "Normal loyalty applies no extra modifier."
+    };
+  }
+
+  if (loyalty >= 20) {
+    return {
+      label: "shaken",
+      className: "low",
+      governanceBonus: -1,
+      combatBonus: -1,
+      summary: "Low loyalty applies a mild penalty to governance and combat."
+    };
+  }
+
+  return {
+    label: "defiant",
+    className: "critical",
+    governanceBonus: -3,
+    combatBonus: -3,
+    summary: "Critical loyalty applies severe penalties. Betrayal is intentionally out of scope for this prototype."
+  };
+}
+
+function ensureSelectedAttackTarget() {
+  const region = getSelectedRegion();
+  const targets = getAttackTargets(region);
+
+  if (!targets.length) {
+    state.selectedAttackTargetId = null;
+    return;
+  }
+
+  const currentTarget = targets.find((target) => target.id === state.selectedAttackTargetId);
+  if (!currentTarget) {
+    state.selectedAttackTargetId = targets[0].id;
+  }
+}
+
+function canPreviewAttack(attacker, defender) {
+  return Boolean(
+    attacker &&
+    defender &&
+    attacker.owner === "player" &&
+    defender.owner === "neutral" &&
+    attacker.neighbors.includes(defender.id)
   );
 }
 
-function getRegionDescription(region) {
-  const counts = getRegionAssignmentCounts();
-  const suffix = ` The empire currently holds ${counts.owned} regions, with ${counts.governors} governors and ${counts.assistants} assistants installed.`;
-
-  switch (region.type) {
-    case "wealth":
-      return `Fertile roads, market charters, and caravan tolls make ${region.name} a prize for any claimant.${suffix}`;
-    case "fortress":
-      return `${region.name} anchors the border with heavy walls, disciplined garrisons, and narrow approaches.${suffix}`;
-    case "mystic":
-      return `${region.name} draws strength from shrines, omens, and strange rites that shape loyalty as much as steel.${suffix}`;
-    default:
-      return suffix;
+function getAttackTargets(region) {
+  if (!region || region.owner !== "player") {
+    return [];
   }
+
+  return region.neighbors
+    .map((neighborId) => getRegionById(neighborId))
+    .filter((neighbor) => neighbor && neighbor.owner === "neutral");
+}
+
+function getCurrentDirective() {
+  return DIRECTIVES[state.directiveId];
+}
+
+function getAssignedCharacters() {
+  return state.characters.filter((character) => getCharacterAssignment(character.id));
+}
+
+function getOwnedRegions() {
+  return state.regions.filter((region) => region.owner === "player");
+}
+
+function checkVictory() {
+  return state.regions.every((region) => region.owner === "player");
+}
+
+function createStat(initialValue, label, visibleValue) {
+  return {
+    total: initialValue,
+    lines: [{ label, value: visibleValue }]
+  };
+}
+
+function applyStat(stat, label, value) {
+  if (!value) {
+    return;
+  }
+
+  stat.total += value;
+  stat.lines.push({ label, value });
+}
+
+function finalizeStat(stat) {
+  stat.total = Math.max(0, stat.total);
+}
+
+function getLandmark(landmarkId) {
+  return landmarkId ? LANDMARKS[landmarkId] : null;
+}
+
+function getOrCreateRegionEffect(regionId) {
+  if (!state.activeEffects[regionId]) {
+    state.activeEffects[regionId] = {
+      attackBonus: 0,
+      stabilityBonus: 0,
+      musterBonus: 0,
+      ignoreRivalry: false,
+      notes: []
+    };
+  }
+
+  return state.activeEffects[regionId];
+}
+
+function getRegionEffect(regionId) {
+  return state.activeEffects[regionId] || {
+    attackBonus: 0,
+    stabilityBonus: 0,
+    musterBonus: 0,
+    ignoreRivalry: false,
+    notes: []
+  };
+}
+
+function getCombatOutlook(margin) {
+  if (margin >= 5) {
+    return {
+      label: "Favored",
+      className: "positive",
+      copy: "This battle is clearly in your favor if no assignments change before the assault."
+    };
+  }
+
+  if (margin >= 1) {
+    return {
+      label: "Narrow edge",
+      className: "neutral",
+      copy: "You have a small advantage. An active ability or better pairing would make the result safer."
+    };
+  }
+
+  if (margin >= -3) {
+    return {
+      label: "Risky",
+      className: "warning",
+      copy: "This attack is close to even, but the defender still holds the edge."
+    };
+  }
+
+  return {
+    label: "Unfavorable",
+    className: "danger",
+    copy: "The defender is likely to hold. Reassign officers, change directive, or use an active ability first."
+  };
+}
+
+function formatSignedValue(value) {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function labelForType(type) {
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function addLogEntry(message, type) {
@@ -783,17 +1834,9 @@ function addLogEntry(message, type) {
     message
   });
 
-  if (state.log.length > 36) {
-    state.log = state.log.slice(state.log.length - 36);
+  if (state.log.length > 48) {
+    state.log = state.log.slice(state.log.length - 48);
   }
-}
-
-function getCurrentDirective() {
-  return directives[state.directiveIndex];
-}
-
-function labelForType(type) {
-  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function getSelectedRegion() {
@@ -801,7 +1844,7 @@ function getSelectedRegion() {
 }
 
 function getRegionById(regionId) {
-  return state.regions.find((region) => region.id === regionId);
+  return state.regions.find((region) => region.id === regionId) || null;
 }
 
 function getCharacterById(characterId) {
@@ -813,12 +1856,17 @@ function getCharacterAssignment(characterId) {
     if (region.governorId === characterId) {
       return { regionId: region.id, role: "governor" };
     }
+
     if (region.assistantId === characterId) {
       return { regionId: region.id, role: "assistant" };
     }
   }
 
   return null;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 init();
