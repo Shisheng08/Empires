@@ -11,6 +11,7 @@ No package install, build step, or local server is required.
 ## Controls
 
 - Click a region in the left panel to inspect it.
+- Click a province on the visual map or in the left panel to inspect it.
 - Use the top bar to switch the global directive each turn.
 - In owned regions, assign a governor and optional assistant from the center panel.
 - Activate available active abilities from the selected region before combat.
@@ -23,6 +24,7 @@ No package install, build step, or local server is required.
 - 9 named characters with stats, loyalty, traits, and relationships
 - Governor and assistant assignments
 - Visible regional output formulas for gold, defense, and stability
+- Data-driven SVG campaign map for quick province overview
 - Three directives: Conquest, Development, Stability
 - Adjacency-based conquest with combat preview and auto-resolve
 - Passive and active abilities
@@ -34,6 +36,7 @@ No package install, build step, or local server is required.
 - `index.html`: static layout shell
 - `styles.css`: dark fantasy UI styling and responsive layout
 - `app.js`: game state, formulas, rendering, interactions, combat, and turn resolution
+- `app.js` also contains the data-driven `MAP_DEFINITIONS` object for future maps
 - `PROJECT_PLAN.md`: reviewed plan and phase tracker
 - `DEVELOPMENT_ROADMAP.md`: phased roadmap and step-by-step development sequence
 - `AGENTS.md`: repository-specific working rules

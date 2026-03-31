@@ -14,6 +14,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 - Completed: adjacency-based attacks with combat preview and auto-resolve conquest
 - Completed: passive and active abilities
 - Completed: loyalty bands and lightweight friend/rival interactions
+- Completed: visual campaign map with extensible map-definition data
 - Completed: victory by conquering all regions
 - In progress: balancing numbers, event variety, and deeper feedback polish
 

@@ -195,6 +195,187 @@ select {
   background: linear-gradient(180deg, rgba(218, 181, 111, 0.18), rgba(218, 181, 111, 0.05));
 }
 
+.map-panel-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 16px;
+  padding: 16px;
+}
+
+.map-canvas,
+.map-legend {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+}
+
+.map-canvas {
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.world-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+.map-ocean {
+  fill: url(#map-ocean);
+}
+
+.map-backdrop path {
+  fill: url(#map-land);
+  stroke: rgba(229, 207, 163, 0.12);
+  stroke-width: 3;
+}
+
+.map-routes {
+  opacity: 0.9;
+}
+
+.map-route {
+  stroke: rgba(236, 223, 199, 0.1);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 6 12;
+}
+
+.map-route.is-selected-edge {
+  stroke: rgba(218, 181, 111, 0.28);
+  stroke-width: 5;
+}
+
+.map-regions {
+  filter: url(#region-shadow);
+}
+
+.map-region {
+  cursor: pointer;
+}
+
+.map-region-shape {
+  stroke: rgba(240, 230, 207, 0.25);
+  stroke-width: 4;
+  transition: fill 120ms ease, stroke 120ms ease, transform 120ms ease;
+}
+
+.map-region.owner-player.type-wealth .map-region-shape {
+  fill: rgba(201, 166, 78, 0.68);
+}
+
+.map-region.owner-player.type-fortress .map-region-shape {
+  fill: rgba(112, 132, 175, 0.68);
+}
+
+.map-region.owner-player.type-mystic .map-region-shape {
+  fill: rgba(127, 100, 173, 0.72);
+}
+
+.map-region.owner-neutral.type-wealth .map-region-shape {
+  fill: rgba(130, 103, 52, 0.48);
+}
+
+.map-region.owner-neutral.type-fortress .map-region-shape {
+  fill: rgba(84, 94, 116, 0.5);
+}
+
+.map-region.owner-neutral.type-mystic .map-region-shape {
+  fill: rgba(92, 72, 119, 0.5);
+}
+
+.map-region:hover .map-region-shape,
+.map-region.is-selected .map-region-shape {
+  stroke: rgba(247, 229, 188, 0.72);
+}
+
+.map-region.is-selected .map-region-shape {
+  fill-opacity: 1;
+  stroke-width: 6;
+}
+
+.map-region.is-attack-target .map-region-shape {
+  stroke: rgba(217, 127, 115, 0.75);
+  stroke-width: 5;
+  stroke-dasharray: 10 8;
+}
+
+.map-region-label,
+.map-region-subtitle {
+  fill: #f5ebd6;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.map-region-label {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.map-region-subtitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  fill: rgba(245, 235, 214, 0.82);
+}
+
+.map-legend {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.map-legend-group {
+  display: grid;
+  gap: 8px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.legend-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.legend-swatch.player {
+  background: rgba(135, 188, 148, 0.55);
+}
+
+.legend-swatch.neutral {
+  background: rgba(217, 127, 115, 0.45);
+}
+
+.legend-swatch.wealth {
+  background: rgba(201, 166, 78, 0.72);
+}
+
+.legend-swatch.fortress {
+  background: rgba(112, 132, 175, 0.72);
+}
+
+.legend-swatch.mystic {
+  background: rgba(127, 100, 173, 0.75);
+}
+
+.legend-swatch.selected {
+  background: rgba(218, 181, 111, 0.82);
+}
+
+.legend-swatch.target {
+  background: rgba(217, 127, 115, 0.72);
+}
+
 .main-grid {
   min-height: 0;
   display: grid;
@@ -882,6 +1063,7 @@ select:focus,
   }
 
   .top-bar,
+  .map-panel-body,
   .main-grid,
   .bottom-grid,
   .detail-meta-grid,
@@ -902,6 +1084,11 @@ select:focus,
   .post-metrics,
   .roster-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .map-canvas,
+  .world-map {
+    min-height: 340px;
   }
 }
 

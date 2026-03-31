@@ -64,10 +64,90 @@ const LANDMARKS = {
   }
 };
 
+// Map layouts are data-driven so future scenarios can swap in a new region geometry set.
+const MAP_DEFINITIONS = {
+  "ashen-realm": {
+    id: "ashen-realm",
+    name: "Ashen Realm",
+    description: "A parchment campaign map of the central marches, trade routes, and shrine-lands.",
+    viewBox: "0 0 1000 560",
+    backdropPaths: [
+      "M72 103 C143 41 280 29 404 61 C538 23 705 34 832 97 C903 134 941 212 929 302 C948 391 901 489 809 516 C690 554 514 541 386 511 C256 531 142 495 88 421 C45 365 38 263 72 103 Z",
+      "M239 148 C304 121 374 112 441 125 C399 163 382 214 396 266 C334 291 279 290 228 256 C208 220 213 179 239 148 Z",
+      "M617 141 C682 117 752 123 804 155 C834 196 826 246 791 281 C726 300 666 293 613 268 C589 224 590 179 617 141 Z"
+    ],
+    routePairs: [
+      ["obsidian-crown", "silvermere"],
+      ["obsidian-crown", "thornwatch"],
+      ["obsidian-crown", "veilmere"],
+      ["silvermere", "veilmere"],
+      ["silvermere", "ashen-plains"],
+      ["thornwatch", "veilmere"],
+      ["thornwatch", "starfall-bastion"],
+      ["veilmere", "ashen-plains"],
+      ["veilmere", "moonfall-sanctum"],
+      ["ashen-plains", "moonfall-sanctum"],
+      ["starfall-bastion", "moonfall-sanctum"]
+    ],
+    regions: [
+      {
+        id: "obsidian-crown",
+        path: "M160 92 L290 88 L352 152 L331 232 L244 258 L154 236 L114 173 Z",
+        labelX: 236,
+        labelY: 172,
+        terrain: "fortress"
+      },
+      {
+        id: "silvermere",
+        path: "M138 287 L258 268 L335 303 L324 399 L249 458 L131 431 L101 360 Z",
+        labelX: 222,
+        labelY: 357,
+        terrain: "wealth"
+      },
+      {
+        id: "thornwatch",
+        path: "M362 103 L489 87 L541 148 L516 243 L434 284 L347 240 L331 160 Z",
+        labelX: 434,
+        labelY: 173,
+        terrain: "fortress"
+      },
+      {
+        id: "veilmere",
+        path: "M340 276 L446 259 L536 298 L534 378 L448 432 L331 404 L298 333 Z",
+        labelX: 420,
+        labelY: 338,
+        terrain: "mystic"
+      },
+      {
+        id: "ashen-plains",
+        path: "M309 422 L437 447 L522 441 L596 492 L474 530 L337 518 L261 468 Z",
+        labelX: 426,
+        labelY: 487,
+        terrain: "wealth"
+      },
+      {
+        id: "starfall-bastion",
+        path: "M571 127 L704 110 L818 144 L803 236 L717 288 L590 257 L539 194 Z",
+        labelX: 679,
+        labelY: 191,
+        terrain: "fortress"
+      },
+      {
+        id: "moonfall-sanctum",
+        path: "M556 305 L678 293 L795 329 L817 424 L709 484 L586 463 L528 392 Z",
+        labelX: 675,
+        labelY: 384,
+        terrain: "mystic"
+      }
+    ]
+  }
+};
+
 // The full prototype state is kept in plain data so the file remains easy to extend later.
 const state = {
   turn: 1,
   treasury: 24,
+  activeMapId: "ashen-realm",
   directiveId: "development",
   selectedRegionId: "obsidian-crown",
   selectedAttackTargetId: null,
@@ -321,6 +401,9 @@ const elements = {
   turnNumber: document.querySelector("#turn-number"),
   treasuryValue: document.querySelector("#treasury-value"),
   ownedCount: document.querySelector("#owned-count"),
+  mapSubtitle: document.querySelector("#map-subtitle"),
+  mapCanvas: document.querySelector("#map-canvas"),
+  mapLegend: document.querySelector("#map-legend"),
   currentDirectiveName: document.querySelector("#current-directive-name"),
   currentDirectiveCopy: document.querySelector("#current-directive-copy"),
   directiveControls: document.querySelector("#directive-controls"),
@@ -346,10 +429,22 @@ function init() {
 
 function bindEvents() {
   elements.regionList.addEventListener("click", handleRegionListClick);
+  elements.mapCanvas.addEventListener("click", handleMapClick);
   elements.directiveControls.addEventListener("click", handleDirectiveClick);
   elements.regionDetail.addEventListener("change", handleRegionDetailChange);
   elements.regionDetail.addEventListener("click", handleRegionDetailClick);
   elements.endTurnButton.addEventListener("click", endTurn);
+}
+
+function handleMapClick(event) {
+  const regionNode = event.target.closest("[data-region-id]");
+  if (!regionNode) {
+    return;
+  }
+
+  state.selectedRegionId = regionNode.dataset.regionId;
+  ensureSelectedAttackTarget();
+  render();
 }
 
 function handleRegionListClick(event) {
@@ -412,12 +507,132 @@ function handleRegionDetailClick(event) {
 
 function render() {
   renderTopBar();
+  renderMapPanel();
   renderDirectiveControls();
   renderRegionList();
   renderRegionDetail();
   renderCharacterRoster();
   renderLog();
   renderTurnPanel();
+}
+
+function renderMapPanel() {
+  const mapDefinition = getActiveMapDefinition();
+  const selectedRegion = getSelectedRegion();
+  const attackTargets = getAttackTargets(selectedRegion);
+
+  elements.mapSubtitle.textContent = `${mapDefinition.description} Selected: ${selectedRegion.name}.`;
+  elements.mapCanvas.innerHTML = renderMapSvg(mapDefinition, selectedRegion, attackTargets);
+  elements.mapLegend.innerHTML = `
+    <div class="map-legend-group">
+      <span class="mini-label">Ownership</span>
+      <div class="legend-row">
+        <span class="legend-swatch player"></span><span>Player-held</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-swatch neutral"></span><span>Neutral</span>
+      </div>
+    </div>
+    <div class="map-legend-group">
+      <span class="mini-label">Region Type</span>
+      <div class="legend-row">
+        <span class="legend-swatch wealth"></span><span>Wealth</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-swatch fortress"></span><span>Fortress</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-swatch mystic"></span><span>Mystic</span>
+      </div>
+    </div>
+    <div class="map-legend-group">
+      <span class="mini-label">Highlights</span>
+      <div class="legend-row">
+        <span class="legend-swatch selected"></span><span>Selected province</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-swatch target"></span><span>Valid assault target</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderMapSvg(mapDefinition, selectedRegion, attackTargets) {
+  const attackTargetIds = new Set(attackTargets.map((region) => region.id));
+  const selectedNeighborIds = new Set(selectedRegion.neighbors);
+
+  return `
+    <svg class="world-map" viewBox="${mapDefinition.viewBox}" role="img" aria-label="${mapDefinition.name}">
+      <defs>
+        <linearGradient id="map-ocean" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#120f1c"></stop>
+          <stop offset="100%" stop-color="#09080d"></stop>
+        </linearGradient>
+        <linearGradient id="map-land" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#403424"></stop>
+          <stop offset="100%" stop-color="#211b14"></stop>
+        </linearGradient>
+        <filter id="region-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="rgba(0,0,0,0.35)"></feDropShadow>
+        </filter>
+      </defs>
+
+      <rect class="map-ocean" x="0" y="0" width="1000" height="560" rx="28"></rect>
+      <g class="map-backdrop">
+        ${mapDefinition.backdropPaths.map((path) => `<path d="${path}"></path>`).join("")}
+      </g>
+
+      <g class="map-routes">
+        ${mapDefinition.routePairs.map((pair) => renderMapRoute(mapDefinition, pair, selectedRegion.id, selectedNeighborIds)).join("")}
+      </g>
+
+      <g class="map-regions">
+        ${mapDefinition.regions.map((regionShape) => renderMapRegion(regionShape, attackTargetIds, selectedRegion.id)).join("")}
+      </g>
+    </svg>
+  `;
+}
+
+function renderMapRoute(mapDefinition, pair, selectedRegionId, selectedNeighborIds) {
+  const from = getMapRegionShape(mapDefinition, pair[0]);
+  const to = getMapRegionShape(mapDefinition, pair[1]);
+  if (!from || !to) {
+    return "";
+  }
+
+  const routeClasses = [
+    "map-route",
+    pair.includes(selectedRegionId) ? "is-selected-edge" : "",
+    selectedNeighborIds.has(pair[0]) && selectedNeighborIds.has(pair[1]) ? "is-neighbor-band" : ""
+  ].filter(Boolean).join(" ");
+
+  return `<line class="${routeClasses}" x1="${from.labelX}" y1="${from.labelY}" x2="${to.labelX}" y2="${to.labelY}"></line>`;
+}
+
+function renderMapRegion(regionShape, attackTargetIds, selectedRegionId) {
+  const region = getRegionById(regionShape.id);
+  if (!region) {
+    return "";
+  }
+
+  const classes = [
+    "map-region",
+    `owner-${region.owner}`,
+    `type-${region.type}`,
+    region.id === selectedRegionId ? "is-selected" : "",
+    attackTargetIds.has(region.id) ? "is-attack-target" : ""
+  ].filter(Boolean).join(" ");
+  const landmark = getLandmark(region.landmark);
+
+  return `
+    <g class="${classes}" data-region-id="${region.id}" tabindex="0">
+      <path class="map-region-shape" d="${regionShape.path}"></path>
+      <text class="map-region-label" x="${regionShape.labelX}" y="${regionShape.labelY}">${region.name}</text>
+      <text class="map-region-subtitle" x="${regionShape.labelX}" y="${regionShape.labelY + 20}">
+        ${labelForType(region.type)}${landmark ? ` • ${landmark.name}` : ""}
+      </text>
+    </g>
+  `;
 }
 
 function renderTopBar() {
@@ -1737,6 +1952,14 @@ function getOwnedRegions() {
 
 function checkVictory() {
   return state.regions.every((region) => region.owner === "player");
+}
+
+function getActiveMapDefinition() {
+  return MAP_DEFINITIONS[state.activeMapId];
+}
+
+function getMapRegionShape(mapDefinition, regionId) {
+  return mapDefinition.regions.find((regionShape) => regionShape.id === regionId) || null;
 }
 
 function createStat(initialValue, label, visibleValue) {
