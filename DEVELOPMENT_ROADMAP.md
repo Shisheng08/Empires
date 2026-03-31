@@ -31,6 +31,7 @@ Steps:
 3. Highlight friend and rival effects more strongly in the region detail panel.
 4. Make region roles clearer at a glance through stronger summaries and tags.
 5. Improve event log wording so battle and economy outcomes read clearly.
+6. Refine the visual map so players can read borders, routes, and ownership faster.
 
 Deliverable:
 
@@ -47,6 +48,7 @@ Steps:
 3. Add more event variants tied to directives, loyalty, and low-stability regions.
 4. Improve province differentiation so neutral targets feel strategically distinct.
 5. Tune the roster so no single character dominates every situation.
+6. Add support for alternate map definitions with distinct layouts and province metadata.
 
 Deliverable:
 
@@ -89,16 +91,27 @@ A stronger strategy prototype without undermining clarity or maintainability.
 3. Adjust combat, output, and loyalty numbers using small, testable changes.
 4. Improve combat preview text so the biggest contributors are easier to see.
 5. Improve roster and region detail readability for loyalty and relationships.
-6. Expand event log feedback for turn resolution and battle outcomes.
-7. Add a small set of new landmarks or abilities only after balance improves.
-8. Update `PROJECT_PLAN.md` whenever a phase status changes.
-9. Update `README.md` whenever controls, setup, or gameplay flow changes.
-10. Commit each finished slice as a focused change.
+6. Refine the SVG map presentation and make route, ownership, and target states easier to scan.
+7. Extract any new map rules into data definitions instead of hardcoding them in render logic.
+8. Expand event log feedback for turn resolution and battle outcomes.
+9. Add a small set of new landmarks or abilities only after balance improves.
+10. Update `PROJECT_PLAN.md` whenever a phase status changes.
+11. Update `README.md` whenever controls, setup, or gameplay flow changes.
+12. Commit each finished slice as a focused change.
+
+## Map Development Track
+
+1. Keep map geometry, routes, and region labels inside map-definition data.
+2. Support alternate scenarios by swapping `activeMapId` and matching region data.
+3. Add map-specific metadata only through structured definitions, not scattered conditionals.
+4. Keep the visual map interactive, but do not let map rendering own game rules.
+5. Document any new map schema in `README.md` and `PROJECT_PLAN.md`.
 
 ## Recommended Immediate Tasks
 
 1. Balance combat and loyalty formulas.
 2. Improve combat preview readability.
-3. Improve event log explanations.
-4. Add a few more meaningful landmark effects.
-5. Add `localStorage` save and reset support.
+3. Improve map readability and province-state highlights.
+4. Improve event log explanations.
+5. Add a few more meaningful landmark effects.
+6. Add `localStorage` save and reset support.

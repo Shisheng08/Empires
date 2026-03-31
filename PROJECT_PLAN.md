@@ -17,6 +17,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 - Completed: visual campaign map with extensible map-definition data
 - Completed: victory by conquering all regions
 - In progress: balancing numbers, event variety, and deeper feedback polish
+- In progress: turning the map layer into a reusable scenario system rather than a single layout
 
 ## MVP Scope
 
@@ -68,7 +69,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 ### Phase 5 - Strategic Depth
 
 - Status: Partial
-- Notes: Landmarks are implemented. Further balancing and event variety remain open.
+- Notes: Landmarks and the first visual map are implemented. Further map polish, alternate scenarios, balancing, and event variety remain open.
 
 ### Phase 6 - Refactor and Polish
 
@@ -78,6 +79,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 ## Immediate Next Improvements
 
 - Balance combat and loyalty numbers after real playtesting
+- Refine the visual map and formalize support for additional map definitions
 - Add richer event outcomes tied to directives and low stability
 - Surface more combat details for neutral defenses if neutral governors are added later
 - Consider trivial browser persistence only after the core loop feels stable

@@ -143,258 +143,317 @@ const MAP_DEFINITIONS = {
   }
 };
 
-// The full prototype state is kept in plain data so the file remains easy to extend later.
-const state = {
-  turn: 1,
-  treasury: 24,
-  activeMapId: "ashen-realm",
-  directiveId: "development",
-  selectedRegionId: "obsidian-crown",
-  selectedAttackTargetId: null,
-  attackUsedThisTurn: false,
-  gameWon: false,
-  activatedAbilities: {},
-  activeEffects: {},
-  regions: [
-    {
-      id: "obsidian-crown",
-      name: "Obsidian Crown",
-      type: "fortress",
-      owner: "player",
-      governorId: "kael-thorn",
-      assistantId: "ysra-moonveil",
-      baseGold: 6,
-      baseDefense: 14,
-      baseStability: 8,
-      neighbors: ["silvermere", "thornwatch", "veilmere"],
-      landmark: "sky-citadel"
-    },
-    {
-      id: "silvermere",
-      name: "Silvermere",
-      type: "wealth",
-      owner: "player",
-      governorId: "seraphine-vale",
-      assistantId: "tiber-halcyon",
-      baseGold: 11,
-      baseDefense: 6,
-      baseStability: 9,
-      neighbors: ["obsidian-crown", "veilmere", "ashen-plains"],
-      landmark: "silver-port"
-    },
-    {
-      id: "thornwatch",
-      name: "Thornwatch",
-      type: "fortress",
-      owner: "neutral",
-      governorId: null,
-      assistantId: null,
-      baseGold: 5,
-      baseDefense: 12,
-      baseStability: 7,
-      neighbors: ["obsidian-crown", "veilmere", "starfall-bastion"],
-      landmark: "ancient-forge"
-    },
-    {
-      id: "veilmere",
-      name: "Veilmere",
-      type: "mystic",
-      owner: "neutral",
-      governorId: null,
-      assistantId: null,
-      baseGold: 7,
-      baseDefense: 7,
-      baseStability: 10,
-      neighbors: ["obsidian-crown", "silvermere", "thornwatch", "ashen-plains", "moonfall-sanctum"],
-      landmark: "moonwell"
-    },
-    {
-      id: "ashen-plains",
-      name: "Ashen Plains",
-      type: "wealth",
-      owner: "neutral",
-      governorId: null,
-      assistantId: null,
-      baseGold: 12,
-      baseDefense: 5,
-      baseStability: 6,
-      neighbors: ["silvermere", "veilmere", "moonfall-sanctum"],
-      landmark: null
-    },
-    {
-      id: "starfall-bastion",
-      name: "Starfall Bastion",
-      type: "fortress",
-      owner: "neutral",
-      governorId: null,
-      assistantId: null,
-      baseGold: 4,
-      baseDefense: 15,
-      baseStability: 8,
-      neighbors: ["thornwatch", "moonfall-sanctum"],
-      landmark: "sky-citadel"
-    },
-    {
-      id: "moonfall-sanctum",
-      name: "Moonfall Sanctum",
-      type: "mystic",
-      owner: "neutral",
-      governorId: null,
-      assistantId: null,
-      baseGold: 6,
-      baseDefense: 8,
-      baseStability: 11,
-      neighbors: ["veilmere", "ashen-plains", "starfall-bastion"],
-      landmark: "moonwell"
-    }
-  ],
-  characters: [
-    {
-      id: "seraphine-vale",
-      name: "Lady Seraphine Vale",
-      portrait: "SV",
-      might: 4,
-      intellect: 7,
-      charisma: 9,
-      will: 8,
-      loyalty: 78,
-      trait: "Silver-Tongued Regent",
-      abilityName: "Golden Tithes",
-      abilityType: "passive",
-      abilityText: "While assigned to a wealth province, gain +3 gold.",
-      friends: ["lysandra-crow", "tiber-halcyon"],
-      rivals: ["merek-ashfall"]
-    },
-    {
-      id: "dorian-blacktide",
-      name: "Marshal Dorian Blacktide",
-      portrait: "DB",
-      might: 9,
-      intellect: 5,
-      charisma: 4,
-      will: 8,
-      loyalty: 71,
-      trait: "Siege-Born Commander",
-      abilityName: "March of Iron",
-      abilityType: "active",
-      abilityText: "Once per turn, the assigned province gains +4 attack for its next assault.",
-      friends: ["kael-thorn"],
-      rivals: ["lysandra-crow"]
-    },
-    {
-      id: "elowen-pyre",
-      name: "High Seer Elowen Pyre",
-      portrait: "EP",
-      might: 3,
-      intellect: 9,
-      charisma: 6,
-      will: 9,
-      loyalty: 66,
-      trait: "Starfire Oracle",
-      abilityName: "Astral Census",
-      abilityType: "passive",
-      abilityText: "While assigned to a mystic province, gain +1 gold and +2 stability.",
-      friends: ["ysra-moonveil"],
-      rivals: ["brannoc-voss"]
-    },
-    {
-      id: "kael-thorn",
-      name: "Warden Kael Thorn",
-      portrait: "KT",
-      might: 8,
-      intellect: 6,
-      charisma: 5,
-      will: 8,
-      loyalty: 88,
-      trait: "Frontier Sentinel",
-      abilityName: "Border Wards",
-      abilityType: "passive",
-      abilityText: "Gain +3 defense as governor, or +1 as assistant, in any province.",
-      friends: ["dorian-blacktide", "brannoc-voss"],
-      rivals: ["lysandra-crow"]
-    },
-    {
-      id: "merek-ashfall",
-      name: "Lord Merek Ashfall",
-      portrait: "MA",
-      might: 7,
-      intellect: 7,
-      charisma: 7,
-      will: 6,
-      loyalty: 58,
-      trait: "Ambitious Warmaster",
-      abilityName: "Scorch Banner",
-      abilityType: "active",
-      abilityText: "Once per turn, the assigned province gains +3 attack and +1 muster for assaults this turn.",
-      friends: [],
-      rivals: ["seraphine-vale", "tiber-halcyon"]
-    },
-    {
-      id: "ysra-moonveil",
-      name: "Oracle Ysra Moonveil",
-      portrait: "YM",
-      might: 2,
-      intellect: 8,
-      charisma: 7,
-      will: 10,
-      loyalty: 84,
-      trait: "Keeper of Omens",
-      abilityName: "Moonlit Court",
-      abilityType: "passive",
-      abilityText: "The assigned province gains +2 stability, and Moonwell provinces recover extra loyalty.",
-      friends: ["elowen-pyre"],
-      rivals: ["merek-ashfall"]
-    },
-    {
-      id: "brannoc-voss",
-      name: "Castellan Brannoc Voss",
-      portrait: "BV",
-      might: 7,
-      intellect: 6,
-      charisma: 4,
-      will: 7,
-      loyalty: 80,
-      trait: "Stone Oath Veteran",
-      abilityName: "Stone Ledger",
-      abilityType: "passive",
-      abilityText: "While assigned to a fortress province, gain +3 defense.",
-      friends: ["kael-thorn"],
-      rivals: ["elowen-pyre", "lysandra-crow"]
-    },
-    {
-      id: "lysandra-crow",
-      name: "Envoy Lysandra Crow",
-      portrait: "LC",
-      might: 4,
-      intellect: 7,
-      charisma: 8,
-      will: 6,
-      loyalty: 69,
-      trait: "Whispercourt Diplomat",
-      abilityName: "Veiled Envoys",
-      abilityType: "active",
-      abilityText: "Once per turn, the assigned province ignores rivalry penalties and gains +2 stability this turn.",
-      friends: ["seraphine-vale"],
-      rivals: ["dorian-blacktide", "kael-thorn", "brannoc-voss"]
-    },
-    {
-      id: "tiber-halcyon",
-      name: "Reeve Tiber Halcyon",
-      portrait: "TH",
-      might: 5,
-      intellect: 6,
-      charisma: 8,
-      will: 7,
-      loyalty: 76,
-      trait: "Harvest Magistrate",
-      abilityName: "Harvest Decree",
-      abilityType: "passive",
-      abilityText: "While assigned to a wealth province, gain +2 gold and +1 stability.",
-      friends: ["seraphine-vale"],
-      rivals: ["merek-ashfall"]
-    }
-  ],
-  log: []
+const MAP_LEGEND_SECTIONS = [
+  {
+    title: "Ownership",
+    rows: [
+      { className: "player", label: "Player-held" },
+      { className: "neutral", label: "Neutral" }
+    ]
+  },
+  {
+    title: "Region Type",
+    rows: [
+      { className: "wealth", label: "Wealth" },
+      { className: "fortress", label: "Fortress" },
+      { className: "mystic", label: "Mystic" }
+    ]
+  },
+  {
+    title: "Highlights",
+    rows: [
+      { className: "selected", label: "Selected province" },
+      { className: "target", label: "Valid assault target" }
+    ]
+  }
+];
+
+const INITIAL_REGIONS = [
+  {
+    id: "obsidian-crown",
+    name: "Obsidian Crown",
+    type: "fortress",
+    owner: "player",
+    governorId: "kael-thorn",
+    assistantId: "ysra-moonveil",
+    baseGold: 6,
+    baseDefense: 14,
+    baseStability: 8,
+    neighbors: ["silvermere", "thornwatch", "veilmere"],
+    landmark: "sky-citadel"
+  },
+  {
+    id: "silvermere",
+    name: "Silvermere",
+    type: "wealth",
+    owner: "player",
+    governorId: "seraphine-vale",
+    assistantId: "tiber-halcyon",
+    baseGold: 11,
+    baseDefense: 6,
+    baseStability: 9,
+    neighbors: ["obsidian-crown", "veilmere", "ashen-plains"],
+    landmark: "silver-port"
+  },
+  {
+    id: "thornwatch",
+    name: "Thornwatch",
+    type: "fortress",
+    owner: "neutral",
+    governorId: null,
+    assistantId: null,
+    baseGold: 5,
+    baseDefense: 12,
+    baseStability: 7,
+    neighbors: ["obsidian-crown", "veilmere", "starfall-bastion"],
+    landmark: "ancient-forge"
+  },
+  {
+    id: "veilmere",
+    name: "Veilmere",
+    type: "mystic",
+    owner: "neutral",
+    governorId: null,
+    assistantId: null,
+    baseGold: 7,
+    baseDefense: 7,
+    baseStability: 10,
+    neighbors: ["obsidian-crown", "silvermere", "thornwatch", "ashen-plains", "moonfall-sanctum"],
+    landmark: "moonwell"
+  },
+  {
+    id: "ashen-plains",
+    name: "Ashen Plains",
+    type: "wealth",
+    owner: "neutral",
+    governorId: null,
+    assistantId: null,
+    baseGold: 12,
+    baseDefense: 5,
+    baseStability: 6,
+    neighbors: ["silvermere", "veilmere", "moonfall-sanctum"],
+    landmark: null
+  },
+  {
+    id: "starfall-bastion",
+    name: "Starfall Bastion",
+    type: "fortress",
+    owner: "neutral",
+    governorId: null,
+    assistantId: null,
+    baseGold: 4,
+    baseDefense: 15,
+    baseStability: 8,
+    neighbors: ["thornwatch", "moonfall-sanctum"],
+    landmark: "sky-citadel"
+  },
+  {
+    id: "moonfall-sanctum",
+    name: "Moonfall Sanctum",
+    type: "mystic",
+    owner: "neutral",
+    governorId: null,
+    assistantId: null,
+    baseGold: 6,
+    baseDefense: 8,
+    baseStability: 11,
+    neighbors: ["veilmere", "ashen-plains", "starfall-bastion"],
+    landmark: "moonwell"
+  }
+];
+
+const INITIAL_CHARACTERS = [
+  {
+    id: "seraphine-vale",
+    name: "Lady Seraphine Vale",
+    portrait: "SV",
+    might: 4,
+    intellect: 7,
+    charisma: 9,
+    will: 8,
+    loyalty: 78,
+    trait: "Silver-Tongued Regent",
+    abilityName: "Golden Tithes",
+    abilityType: "passive",
+    abilityText: "While assigned to a wealth province, gain +3 gold.",
+    friends: ["lysandra-crow", "tiber-halcyon"],
+    rivals: ["merek-ashfall"]
+  },
+  {
+    id: "dorian-blacktide",
+    name: "Marshal Dorian Blacktide",
+    portrait: "DB",
+    might: 9,
+    intellect: 5,
+    charisma: 4,
+    will: 8,
+    loyalty: 71,
+    trait: "Siege-Born Commander",
+    abilityName: "March of Iron",
+    abilityType: "active",
+    abilityText: "Once per turn, the assigned province gains +4 attack for its next assault.",
+    friends: ["kael-thorn"],
+    rivals: ["lysandra-crow"]
+  },
+  {
+    id: "elowen-pyre",
+    name: "High Seer Elowen Pyre",
+    portrait: "EP",
+    might: 3,
+    intellect: 9,
+    charisma: 6,
+    will: 9,
+    loyalty: 66,
+    trait: "Starfire Oracle",
+    abilityName: "Astral Census",
+    abilityType: "passive",
+    abilityText: "While assigned to a mystic province, gain +1 gold and +2 stability.",
+    friends: ["ysra-moonveil"],
+    rivals: ["brannoc-voss"]
+  },
+  {
+    id: "kael-thorn",
+    name: "Warden Kael Thorn",
+    portrait: "KT",
+    might: 8,
+    intellect: 6,
+    charisma: 5,
+    will: 8,
+    loyalty: 88,
+    trait: "Frontier Sentinel",
+    abilityName: "Border Wards",
+    abilityType: "passive",
+    abilityText: "Gain +3 defense as governor, or +1 as assistant, in any province.",
+    friends: ["dorian-blacktide", "brannoc-voss"],
+    rivals: ["lysandra-crow"]
+  },
+  {
+    id: "merek-ashfall",
+    name: "Lord Merek Ashfall",
+    portrait: "MA",
+    might: 7,
+    intellect: 7,
+    charisma: 7,
+    will: 6,
+    loyalty: 58,
+    trait: "Ambitious Warmaster",
+    abilityName: "Scorch Banner",
+    abilityType: "active",
+    abilityText: "Once per turn, the assigned province gains +3 attack and +1 muster for assaults this turn.",
+    friends: [],
+    rivals: ["seraphine-vale", "tiber-halcyon"]
+  },
+  {
+    id: "ysra-moonveil",
+    name: "Oracle Ysra Moonveil",
+    portrait: "YM",
+    might: 2,
+    intellect: 8,
+    charisma: 7,
+    will: 10,
+    loyalty: 84,
+    trait: "Keeper of Omens",
+    abilityName: "Moonlit Court",
+    abilityType: "passive",
+    abilityText: "The assigned province gains +2 stability, and Moonwell provinces recover extra loyalty.",
+    friends: ["elowen-pyre"],
+    rivals: ["merek-ashfall"]
+  },
+  {
+    id: "brannoc-voss",
+    name: "Castellan Brannoc Voss",
+    portrait: "BV",
+    might: 7,
+    intellect: 6,
+    charisma: 4,
+    will: 7,
+    loyalty: 80,
+    trait: "Stone Oath Veteran",
+    abilityName: "Stone Ledger",
+    abilityType: "passive",
+    abilityText: "While assigned to a fortress province, gain +3 defense.",
+    friends: ["kael-thorn"],
+    rivals: ["elowen-pyre", "lysandra-crow"]
+  },
+  {
+    id: "lysandra-crow",
+    name: "Envoy Lysandra Crow",
+    portrait: "LC",
+    might: 4,
+    intellect: 7,
+    charisma: 8,
+    will: 6,
+    loyalty: 69,
+    trait: "Whispercourt Diplomat",
+    abilityName: "Veiled Envoys",
+    abilityType: "active",
+    abilityText: "Once per turn, the assigned province ignores rivalry penalties and gains +2 stability this turn.",
+    friends: ["seraphine-vale"],
+    rivals: ["dorian-blacktide", "kael-thorn", "brannoc-voss"]
+  },
+  {
+    id: "tiber-halcyon",
+    name: "Reeve Tiber Halcyon",
+    portrait: "TH",
+    might: 5,
+    intellect: 6,
+    charisma: 8,
+    will: 7,
+    loyalty: 76,
+    trait: "Harvest Magistrate",
+    abilityName: "Harvest Decree",
+    abilityType: "passive",
+    abilityText: "While assigned to a wealth province, gain +2 gold and +1 stability.",
+    friends: ["seraphine-vale"],
+    rivals: ["merek-ashfall"]
+  }
+];
+
+function cloneRegion(region) {
+  return {
+    ...region,
+    neighbors: [...region.neighbors]
+  };
+}
+
+function cloneCharacter(character) {
+  return {
+    ...character,
+    friends: [...character.friends],
+    rivals: [...character.rivals]
+  };
+}
+
+function createIndex(items) {
+  return new Map(items.map((item) => [item.id, item]));
+}
+
+function createInitialState() {
+  return {
+    turn: 1,
+    treasury: 24,
+    activeMapId: "ashen-realm",
+    directiveId: "development",
+    selectedRegionId: "obsidian-crown",
+    selectedAttackTargetId: null,
+    attackUsedThisTurn: false,
+    gameWon: false,
+    activatedAbilities: {},
+    activeEffects: {},
+    regions: INITIAL_REGIONS.map(cloneRegion),
+    characters: INITIAL_CHARACTERS.map(cloneCharacter),
+    log: []
+  };
+}
+
+const state = createInitialState();
+
+const indexes = {
+  regions: createIndex(state.regions),
+  characters: createIndex(state.characters),
+  mapRegions: Object.fromEntries(
+    Object.entries(MAP_DEFINITIONS).map(([mapId, mapDefinition]) => [mapId, createIndex(mapDefinition.regions)])
+  )
 };
 
 const elements = {
@@ -416,6 +475,8 @@ const elements = {
   victoryBanner: document.querySelector("#victory-banner"),
   endTurnButton: document.querySelector("#end-turn-button")
 };
+
+// Initialization and input wiring.
 
 // Boot the prototype with seeded logs and a valid default attack target.
 function init() {
@@ -442,9 +503,7 @@ function handleMapClick(event) {
     return;
   }
 
-  state.selectedRegionId = regionNode.dataset.regionId;
-  ensureSelectedAttackTarget();
-  render();
+  selectRegion(regionNode.dataset.regionId);
 }
 
 function handleRegionListClick(event) {
@@ -453,9 +512,7 @@ function handleRegionListClick(event) {
     return;
   }
 
-  state.selectedRegionId = card.dataset.regionId;
-  ensureSelectedAttackTarget();
-  render();
+  selectRegion(card.dataset.regionId);
 }
 
 function handleDirectiveClick(event) {
@@ -505,6 +562,8 @@ function handleRegionDetailClick(event) {
   }
 }
 
+// Render pipeline.
+
 function render() {
   renderTopBar();
   renderMapPanel();
@@ -523,38 +582,7 @@ function renderMapPanel() {
 
   elements.mapSubtitle.textContent = `${mapDefinition.description} Selected: ${selectedRegion.name}.`;
   elements.mapCanvas.innerHTML = renderMapSvg(mapDefinition, selectedRegion, attackTargets);
-  elements.mapLegend.innerHTML = `
-    <div class="map-legend-group">
-      <span class="mini-label">Ownership</span>
-      <div class="legend-row">
-        <span class="legend-swatch player"></span><span>Player-held</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-swatch neutral"></span><span>Neutral</span>
-      </div>
-    </div>
-    <div class="map-legend-group">
-      <span class="mini-label">Region Type</span>
-      <div class="legend-row">
-        <span class="legend-swatch wealth"></span><span>Wealth</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-swatch fortress"></span><span>Fortress</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-swatch mystic"></span><span>Mystic</span>
-      </div>
-    </div>
-    <div class="map-legend-group">
-      <span class="mini-label">Highlights</span>
-      <div class="legend-row">
-        <span class="legend-swatch selected"></span><span>Selected province</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-swatch target"></span><span>Valid assault target</span>
-      </div>
-    </div>
-  `;
+  elements.mapLegend.innerHTML = renderMapLegend();
 }
 
 function renderMapSvg(mapDefinition, selectedRegion, attackTargets) {
@@ -603,7 +631,7 @@ function renderMapRoute(mapDefinition, pair, selectedRegionId, selectedNeighborI
   const routeClasses = [
     "map-route",
     pair.includes(selectedRegionId) ? "is-selected-edge" : "",
-    selectedNeighborIds.has(pair[0]) && selectedNeighborIds.has(pair[1]) ? "is-neighbor-band" : ""
+    selectedNeighborIds.has(pair[0]) || selectedNeighborIds.has(pair[1]) ? "is-neighbor-edge" : ""
   ].filter(Boolean).join(" ");
 
   return `<line class="${routeClasses}" x1="${from.labelX}" y1="${from.labelY}" x2="${to.labelX}" y2="${to.labelY}"></line>`;
@@ -633,6 +661,19 @@ function renderMapRegion(regionShape, attackTargetIds, selectedRegionId) {
       </text>
     </g>
   `;
+}
+
+function renderMapLegend() {
+  return MAP_LEGEND_SECTIONS.map((section) => `
+    <div class="map-legend-group">
+      <span class="mini-label">${section.title}</span>
+      ${section.rows.map((row) => `
+        <div class="legend-row">
+          <span class="legend-swatch ${row.className}"></span><span>${row.label}</span>
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
 }
 
 function renderTopBar() {
@@ -1181,6 +1222,8 @@ function renderTurnPanel() {
   }
 }
 
+// Gameplay actions.
+
 function setDirective(directiveId) {
   if (!DIRECTIVES[directiveId] || directiveId === state.directiveId) {
     return;
@@ -1301,8 +1344,7 @@ function launchAttack() {
     );
     addLogEntry(`${defender.name} joins the empire but still requires a governor.`, "system");
 
-    state.selectedRegionId = defender.id;
-    ensureSelectedAttackTarget();
+    selectRegion(defender.id, false);
 
     if (checkVictory()) {
       state.gameWon = true;
@@ -1359,6 +1401,8 @@ function endTurn() {
   addLogEntry(`New turn begins under the ${getCurrentDirective().name} directive.`, "directive");
   render();
 }
+
+// Rule evaluation and formulas.
 
 // Region output is a transparent stack of base values, province traits, officers, relationships, and temporary effects.
 function computeRegionOutput(region) {
@@ -1903,6 +1947,8 @@ function getLoyaltyBand(loyalty) {
   };
 }
 
+// Shared lookups and utilities.
+
 function ensureSelectedAttackTarget() {
   const region = getSelectedRegion();
   const targets = getAttackTargets(region);
@@ -1954,12 +2000,21 @@ function checkVictory() {
   return state.regions.every((region) => region.owner === "player");
 }
 
+function selectRegion(regionId, shouldRender = true) {
+  state.selectedRegionId = regionId;
+  ensureSelectedAttackTarget();
+
+  if (shouldRender) {
+    render();
+  }
+}
+
 function getActiveMapDefinition() {
   return MAP_DEFINITIONS[state.activeMapId];
 }
 
 function getMapRegionShape(mapDefinition, regionId) {
-  return mapDefinition.regions.find((regionShape) => regionShape.id === regionId) || null;
+  return indexes.mapRegions[mapDefinition.id].get(regionId) || null;
 }
 
 function createStat(initialValue, label, visibleValue) {
@@ -2067,11 +2122,11 @@ function getSelectedRegion() {
 }
 
 function getRegionById(regionId) {
-  return state.regions.find((region) => region.id === regionId) || null;
+  return indexes.regions.get(regionId) || null;
 }
 
 function getCharacterById(characterId) {
-  return state.characters.find((character) => character.id === characterId) || null;
+  return indexes.characters.get(characterId) || null;
 }
 
 function getCharacterAssignment(characterId) {

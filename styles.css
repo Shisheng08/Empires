@@ -247,6 +247,10 @@ select {
   stroke-width: 5;
 }
 
+.map-route.is-neighbor-edge {
+  stroke: rgba(218, 181, 111, 0.16);
+}
+
 .map-regions {
   filter: url(#region-shadow);
 }

@@ -17,6 +17,7 @@ Empire of the Chosen is a direct-open browser prototype. Keep it runnable by ope
 - Keep formulas visible in the UI where possible.
 - Favor simple, transparent mechanics over hidden complexity.
 - Mild penalties are preferred over punishing failure states.
+- Keep map rules data-driven. New scenarios should prefer map-definition objects over hardcoded layout branches.
 
 ## Documentation Rules
 
