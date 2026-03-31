@@ -14,7 +14,8 @@ Steps:
 2. Identify balance issues in combat, loyalty, directives, and regional output.
 3. Tighten UI clarity for assignments, directives, and conquest flow.
 4. Refine formulas in `app.js` so outcomes feel fair and visible.
-5. Keep `README.md` and `PROJECT_PLAN.md` aligned with the actual game state.
+5. Add automated tests around the core rules before broadening scope.
+6. Keep `README.md` and `PROJECT_PLAN.md` aligned with the actual game state.
 
 Deliverable:
 
@@ -88,16 +89,17 @@ A stronger strategy prototype without undermining clarity or maintainability.
 
 1. Review the formulas in `app.js` and note obvious balance problems.
 2. Run repeated manual playthroughs and record which strategies dominate.
-3. Adjust combat, output, and loyalty numbers using small, testable changes.
-4. Improve combat preview text so the biggest contributors are easier to see.
-5. Improve roster and region detail readability for loyalty and relationships.
-6. Refine the SVG map presentation and make route, ownership, and target states easier to scan.
-7. Extract any new map rules into data definitions instead of hardcoding them in render logic.
-8. Expand event log feedback for turn resolution and battle outcomes.
-9. Add a small set of new landmarks or abilities only after balance improves.
-10. Update `PROJECT_PLAN.md` whenever a phase status changes.
-11. Update `README.md` whenever controls, setup, or gameplay flow changes.
-12. Commit each finished slice as a focused change.
+3. Expand automated rule coverage when core logic changes.
+4. Adjust combat, output, and loyalty numbers using small, testable changes.
+5. Improve combat preview text so the biggest contributors are easier to see.
+6. Improve roster and region detail readability for loyalty and relationships.
+7. Refine the SVG map presentation and make route, ownership, and target states easier to scan.
+8. Extract any new map rules into data definitions instead of hardcoding them in render logic.
+9. Expand event log feedback for turn resolution and battle outcomes.
+10. Add a small set of new landmarks or abilities only after balance improves.
+11. Update `PROJECT_PLAN.md` whenever a phase status changes.
+12. Update `README.md` whenever controls, setup, or gameplay flow changes.
+13. Commit each finished slice as a focused change.
 
 ## Map Development Track
 

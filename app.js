@@ -449,32 +449,56 @@ function createInitialState() {
 const state = createInitialState();
 
 const indexes = {
-  regions: createIndex(state.regions),
-  characters: createIndex(state.characters),
-  mapRegions: Object.fromEntries(
-    Object.entries(MAP_DEFINITIONS).map(([mapId, mapDefinition]) => [mapId, createIndex(mapDefinition.regions)])
-  )
+  regions: new Map(),
+  characters: new Map(),
+  mapRegions: {}
 };
 
-const elements = {
-  turnNumber: document.querySelector("#turn-number"),
-  treasuryValue: document.querySelector("#treasury-value"),
-  ownedCount: document.querySelector("#owned-count"),
-  mapSubtitle: document.querySelector("#map-subtitle"),
-  mapCanvas: document.querySelector("#map-canvas"),
-  mapLegend: document.querySelector("#map-legend"),
-  currentDirectiveName: document.querySelector("#current-directive-name"),
-  currentDirectiveCopy: document.querySelector("#current-directive-copy"),
-  directiveControls: document.querySelector("#directive-controls"),
-  selectedRegionStatus: document.querySelector("#selected-region-status"),
-  regionList: document.querySelector("#region-list"),
-  regionDetail: document.querySelector("#region-detail"),
-  characterRoster: document.querySelector("#character-roster"),
-  eventLog: document.querySelector("#event-log"),
-  turnSummary: document.querySelector("#turn-summary"),
-  victoryBanner: document.querySelector("#victory-banner"),
-  endTurnButton: document.querySelector("#end-turn-button")
-};
+function refreshIndexes() {
+  indexes.regions = createIndex(state.regions);
+  indexes.characters = createIndex(state.characters);
+  indexes.mapRegions = Object.fromEntries(
+    Object.entries(MAP_DEFINITIONS).map(([mapId, mapDefinition]) => [mapId, createIndex(mapDefinition.regions)])
+  );
+}
+
+function resetState() {
+  Object.assign(state, createInitialState());
+  refreshIndexes();
+  return state;
+}
+
+const hasDocument = typeof document !== "undefined";
+
+function createElements() {
+  if (!hasDocument) {
+    return {};
+  }
+
+  return {
+    turnNumber: document.querySelector("#turn-number"),
+    treasuryValue: document.querySelector("#treasury-value"),
+    ownedCount: document.querySelector("#owned-count"),
+    mapSubtitle: document.querySelector("#map-subtitle"),
+    mapCanvas: document.querySelector("#map-canvas"),
+    mapLegend: document.querySelector("#map-legend"),
+    currentDirectiveName: document.querySelector("#current-directive-name"),
+    currentDirectiveCopy: document.querySelector("#current-directive-copy"),
+    directiveControls: document.querySelector("#directive-controls"),
+    selectedRegionStatus: document.querySelector("#selected-region-status"),
+    regionList: document.querySelector("#region-list"),
+    regionDetail: document.querySelector("#region-detail"),
+    characterRoster: document.querySelector("#character-roster"),
+    eventLog: document.querySelector("#event-log"),
+    turnSummary: document.querySelector("#turn-summary"),
+    victoryBanner: document.querySelector("#victory-banner"),
+    endTurnButton: document.querySelector("#end-turn-button")
+  };
+}
+
+refreshIndexes();
+
+const elements = createElements();
 
 // Initialization and input wiring.
 
@@ -489,6 +513,10 @@ function init() {
 }
 
 function bindEvents() {
+  if (!hasDocument) {
+    return;
+  }
+
   elements.regionList.addEventListener("click", handleRegionListClick);
   elements.mapCanvas.addEventListener("click", handleMapClick);
   elements.directiveControls.addEventListener("click", handleDirectiveClick);
@@ -565,6 +593,10 @@ function handleRegionDetailClick(event) {
 // Render pipeline.
 
 function render() {
+  if (!hasDocument) {
+    return;
+  }
+
   renderTopBar();
   renderMapPanel();
   renderDirectiveControls();
@@ -2147,4 +2179,41 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-init();
+if (hasDocument) {
+  init();
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    DIRECTIVES,
+    LANDMARKS,
+    MAP_DEFINITIONS,
+    MAP_LEGEND_SECTIONS,
+    INITIAL_REGIONS,
+    INITIAL_CHARACTERS,
+    state,
+    resetState,
+    renderMapLegend,
+    computeRegionOutput,
+    computeCombatPreview,
+    getAttackTargets,
+    getRelationshipInfo,
+    getLoyaltyBand,
+    getCurrentDirective,
+    getSelectedRegion,
+    getRegionById,
+    getCharacterById,
+    getCharacterAssignment,
+    getOwnedRegions,
+    selectRegion,
+    setDirective,
+    updateAssignment,
+    activateAbility,
+    launchAttack,
+    endTurn,
+    addLogEntry,
+    getRegionEffect,
+    getLandmark,
+    getActiveMapDefinition
+  };
+}

@@ -8,6 +8,12 @@ Open `index.html` directly in any modern browser.
 
 No package install, build step, or local server is required.
 
+## Automated Tests
+
+Run the game-rule tests with:
+
+`node --test tests/app.test.js`
+
 ## Controls
 
 - Click a region in the left panel to inspect it.
