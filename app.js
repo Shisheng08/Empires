@@ -1835,7 +1835,7 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
   const defenderGovernor = getCharacterById(defenderRegion.governorId);
   const defenderAssistant = getCharacterById(defenderRegion.assistantId);
 
-  const muster = Math.max(1, Math.floor(attackerOutput.stability.total / 6));
+  const muster = Math.max(1, Math.floor(attackerOutput.stability.total / 7));
   applyStat(attack, "Regional muster", muster + attackerEffect.musterBonus);
 
   if (governor) {
@@ -1873,7 +1873,11 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
   applyTypeBonuses({ gold: createStat(0, "", 0), defense, stability: createStat(0, "", 0) }, defenderRegion);
   applyLandmarkDefense(defense, defenderLandmark);
   applyStat(defense, "Defender readiness", Math.max(2, Math.floor(defenderOutput.stability.total / 4)));
-  applyStat(defense, "Terrain friction", 1);
+  applyStat(defense, "Terrain friction", getTerrainFriction(defenderRegion));
+
+  if (defenderRegion.owner === "neutral") {
+    applyStat(defense, "Local resistance", getNeutralResistanceBonus(defenderRegion));
+  }
 
   if (defenderGovernor) {
     applyStat(defense, `${defenderGovernor.name} commands`, getOfficerDefenseContribution(defenderGovernor, "governor"));
@@ -1931,8 +1935,8 @@ function resolveLoyaltyChanges(outputs) {
         delta += 1;
       }
 
-      if (output.stability.total <= 8) {
-        delta -= 1;
+      if (output.stability.total <= 10) {
+        delta -= 2;
       }
 
       if (state.directiveId === "stability") {
@@ -2081,7 +2085,7 @@ function applyOfficerGovernance(output, character, region, role) {
 }
 
 function getOfficerAttackContribution(character, role) {
-  const weight = role === "governor" ? 1 : 0.6;
+  const weight = role === "governor" ? 1 : 0.5;
   const loyalty = getLoyaltyBand(character.loyalty).combatBonus;
   return Math.max(
     1,
@@ -2262,9 +2266,9 @@ function getRelationshipInfo(region) {
     return {
       kind: "friend",
       title: "Friends in office",
-      summary: `${governor.name} and ${assistant.name} trust one another. Governance gains +1 and attacks gain +2.`,
+      summary: `${governor.name} and ${assistant.name} trust one another. Governance gains +1 and attacks gain +1.`,
       outputModifier: 1,
-      attackModifier: 2,
+      attackModifier: 1,
       defenseModifier: 1
     };
   }
@@ -2354,7 +2358,9 @@ function ensureSelectedAttackTarget() {
 
   const currentTarget = targets.find((target) => target.id === state.selectedAttackTargetId);
   if (!currentTarget) {
-    state.selectedAttackTargetId = targets[0].id;
+    state.selectedAttackTargetId = targets
+      .slice()
+      .sort((left, right) => computeCombatPreview(region, right).margin - computeCombatPreview(region, left).margin)[0]?.id || targets[0].id;
   }
 }
 
@@ -2380,6 +2386,22 @@ function getAttackTargets(region) {
 
 function getCurrentDirective() {
   return DIRECTIVES[state.directiveId];
+}
+
+function getTerrainFriction(region) {
+  if (region.type === "fortress") {
+    return 3;
+  }
+
+  if (region.type === "mystic") {
+    return 2;
+  }
+
+  return 1;
+}
+
+function getNeutralResistanceBonus(region) {
+  return 2 + Math.ceil(region.baseGold / 5) + Math.ceil(region.baseStability / 8);
 }
 
 // Persist only serializable game state so browser storage stays decoupled from DOM nodes and indexes.
@@ -2713,6 +2735,7 @@ function checkVictory() {
 
 function selectRegion(regionId, shouldRender = true) {
   state.selectedRegionId = regionId;
+  state.selectedAttackTargetId = null;
   ensureSelectedAttackTarget();
 
   if (shouldRender) {
@@ -2777,7 +2800,7 @@ function getRegionEffect(regionId) {
 }
 
 function getCombatOutlook(margin) {
-  if (margin >= 4) {
+  if (margin >= 5) {
     return {
       label: "Favored",
       className: "positive",
@@ -2793,7 +2816,7 @@ function getCombatOutlook(margin) {
     };
   }
 
-  if (margin >= -4) {
+  if (margin >= -3) {
     return {
       label: "Risky",
       className: "warning",

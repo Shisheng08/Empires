@@ -25,7 +25,7 @@ Run the game-rule tests with:
 - Activate available active abilities from the selected region before combat.
 - Watch the turn alert strip for blocked provinces, unstable courts, loyalty trouble, and ready powers.
 - Use `Save Campaign` and `Load Save` in the turn panel to persist progress in browser `localStorage`.
-- Pick an adjacent neutral region in the conquest section and launch one assault per turn.
+- Pick an adjacent neutral region in the conquest section and launch one assault per turn. The selected province auto-focuses its strongest nearby target first.
 - Click `End Turn` to collect gold, resolve loyalty changes, and refresh your conquest action.
 
 ## Implemented MVP Systems

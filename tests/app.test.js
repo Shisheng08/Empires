@@ -50,7 +50,7 @@ test("conquest directive improves attack preview while keeping the defense side 
   game.setDirective("conquest");
   const conquestPreview = game.computeCombatPreview(attacker, defender);
 
-  assert.equal(conquestPreview.attack.total - developmentPreview.attack.total, 3);
+  assert.equal(conquestPreview.attack.total - developmentPreview.attack.total, 4);
   assert.equal(conquestPreview.margin > developmentPreview.margin, true);
   assert.equal(conquestPreview.defense.total, developmentPreview.defense.total);
 });
@@ -73,12 +73,13 @@ test("Lysandra's active ability suppresses rivalry penalties", () => {
 
 test("launchAttack conquers a valid adjacent neutral province", () => {
   game.selectRegion("obsidian-crown", false);
+  const selectedTargetId = game.state.selectedAttackTargetId;
 
   game.launchAttack();
 
-  assert.equal(game.getRegionById("thornwatch").owner, "player");
+  assert.equal(game.getRegionById(selectedTargetId).owner, "player");
   assert.equal(game.state.attackUsedThisTurn, true);
-  assert.equal(game.state.selectedRegionId, "thornwatch");
+  assert.equal(game.state.selectedRegionId, selectedTargetId);
 });
 
 test("endTurn is blocked when an owned region has no governor", () => {
@@ -188,8 +189,16 @@ test("computeCombatPreview suggests ready active abilities before a risky assaul
 
   assert.equal(preview.margin < 0, true);
   assert.match(preview.attackAnchor, /Merek Ashfall|Regional muster|Kael Thorn/);
-  assert.match(preview.defenseAnchor, /Defender readiness|Base province|Fortress province/);
+  assert.match(preview.defenseAnchor, /Defender readiness|Base province|Fortress province|Local resistance/);
   assert.match(preview.nextStep, /ready active ability/i);
+});
+
+test("selectRegion auto-picks the strongest adjacent assault target", () => {
+  game.selectRegion("obsidian-crown", false);
+  assert.equal(game.state.selectedAttackTargetId, "veilmere");
+
+  game.selectRegion("silvermere", false);
+  assert.equal(game.state.selectedAttackTargetId, "ashen-plains");
 });
 
 test("getEmpireAlerts highlights missing governors and loyalty pressure", () => {
