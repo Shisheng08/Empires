@@ -64,6 +64,16 @@ const LANDMARKS = {
   }
 };
 
+const SAVE_STORAGE_KEY = "empire-of-the-chosen-save";
+const SAVE_SCHEMA_VERSION = 1;
+
+const ROSTER_FILTERS = [
+  { id: "all", label: "All Officers" },
+  { id: "unassigned", label: "Unassigned" },
+  { id: "low-loyalty", label: "Low Loyalty" },
+  { id: "active-ready", label: "Active Ready" }
+];
+
 // Map layouts are data-driven so future scenarios can swap in a new region geometry set.
 const MAP_DEFINITIONS = {
   "ashen-realm": {
@@ -436,6 +446,7 @@ function createInitialState() {
     directiveId: "development",
     selectedDetailTab: "overview",
     selectedRosterTab: "deployed",
+    selectedRosterFilter: "all",
     selectedRegionId: "obsidian-crown",
     selectedAttackTargetId: null,
     attackUsedThisTurn: false,
@@ -495,6 +506,9 @@ function createElements() {
     eventLog: document.querySelector("#event-log"),
     turnSummary: document.querySelector("#turn-summary"),
     victoryBanner: document.querySelector("#victory-banner"),
+    saveStatus: document.querySelector("#save-status"),
+    saveGameButton: document.querySelector("#save-game-button"),
+    loadGameButton: document.querySelector("#load-game-button"),
     endTurnButton: document.querySelector("#end-turn-button")
   };
 }
@@ -526,6 +540,8 @@ function bindEvents() {
   elements.regionDetail.addEventListener("change", handleRegionDetailChange);
   elements.regionDetail.addEventListener("click", handleRegionDetailClick);
   elements.characterRoster.addEventListener("click", handleCharacterRosterClick);
+  elements.saveGameButton.addEventListener("click", handleSaveGameClick);
+  elements.loadGameButton.addEventListener("click", handleLoadGameClick);
   elements.endTurnButton.addEventListener("click", endTurn);
 }
 
@@ -603,11 +619,34 @@ function handleRegionDetailClick(event) {
 
 function handleCharacterRosterClick(event) {
   const tabButton = event.target.closest("[data-roster-tab]");
-  if (!tabButton || tabButton.dataset.rosterTab === state.selectedRosterTab) {
+  if (tabButton && tabButton.dataset.rosterTab !== state.selectedRosterTab) {
+    state.selectedRosterTab = tabButton.dataset.rosterTab;
+    render();
     return;
   }
 
-  state.selectedRosterTab = tabButton.dataset.rosterTab;
+  const filterButton = event.target.closest("[data-roster-filter]");
+  if (filterButton && filterButton.dataset.rosterFilter !== state.selectedRosterFilter) {
+    state.selectedRosterFilter = filterButton.dataset.rosterFilter;
+    render();
+  }
+}
+
+function handleSaveGameClick() {
+  const result = saveGame();
+  addLogEntry(result.message, result.ok ? "system" : "warning");
+  render();
+}
+
+function handleLoadGameClick() {
+  const result = loadGame();
+  if (!result.ok) {
+    addLogEntry(result.message, "warning");
+    render();
+    return;
+  }
+
+  addLogEntry(result.message, "system");
   render();
 }
 
@@ -1334,9 +1373,44 @@ function renderDeployedRoster(region) {
 }
 
 function renderFullRoster(selectedRegion) {
-  return getSortedCharacters()
-    .map((character) => renderCompactCharacterCard(character, selectedRegion))
-    .join("");
+  const filteredCharacters = getFilteredCharacters(state.selectedRosterFilter);
+
+  return `
+    ${renderRosterFilters()}
+    ${
+      filteredCharacters.length
+        ? filteredCharacters.map((character) => renderCompactCharacterCard(character, selectedRegion)).join("")
+        : renderRosterFilterEmptyState()
+    }
+  `;
+}
+
+function renderRosterFilters() {
+  return `
+    <div class="roster-filter-bar" aria-label="Officer filters">
+      ${ROSTER_FILTERS.map((filter) => `
+        <button
+          class="roster-filter ${state.selectedRosterFilter === filter.id ? "active" : ""}"
+          type="button"
+          data-roster-filter="${filter.id}"
+        >
+          <span>${filter.label}</span>
+          <strong>${getFilteredCharacters(filter.id).length}</strong>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderRosterFilterEmptyState() {
+  const filter = getRosterFilterById(state.selectedRosterFilter);
+
+  return `
+    <section class="empty-state compact">
+      <div class="mini-label">${filter.label}</div>
+      <p class="empty-copy">No officers currently match this filter. Adjust assignments, loyalty, or ability use to surface more candidates.</p>
+    </section>
+  `;
 }
 
 function renderOfficerFocusCard(character, role, region) {
@@ -1493,8 +1567,11 @@ function renderTurnPanel() {
   const assignedCount = getAssignedCharacters().length;
   const attackState = state.attackUsedThisTurn ? "assault spent" : "assault ready";
   const directive = getCurrentDirective().name;
+  const saveMeta = getSaveMetadata();
 
   elements.turnSummary.textContent = `Directive: ${directive}. ${assignedCount} officers are currently assigned. This turn's conquest action is ${attackState}.`;
+  elements.saveStatus.textContent = saveMeta.summary;
+  elements.loadGameButton.disabled = !saveMeta.exists;
 
   if (state.gameWon) {
     elements.victoryBanner.hidden = false;
@@ -2291,6 +2368,220 @@ function getCurrentDirective() {
   return DIRECTIVES[state.directiveId];
 }
 
+// Persist only serializable game state so browser storage stays decoupled from DOM nodes and indexes.
+function createSaveSnapshot() {
+  return {
+    version: SAVE_SCHEMA_VERSION,
+    savedAt: new Date().toISOString(),
+    state: {
+      turn: state.turn,
+      treasury: state.treasury,
+      activeMapId: state.activeMapId,
+      directiveId: state.directiveId,
+      selectedDetailTab: state.selectedDetailTab,
+      selectedRosterTab: state.selectedRosterTab,
+      selectedRosterFilter: state.selectedRosterFilter,
+      selectedRegionId: state.selectedRegionId,
+      selectedAttackTargetId: state.selectedAttackTargetId,
+      attackUsedThisTurn: state.attackUsedThisTurn,
+      gameWon: state.gameWon,
+      activatedAbilities: { ...state.activatedAbilities },
+      activeEffects: cloneActiveEffects(state.activeEffects),
+      regions: state.regions.map(cloneRegion),
+      characters: state.characters.map(cloneCharacter),
+      log: cloneLogEntries(state.log)
+    }
+  };
+}
+
+function saveGame(storage = getStorageAdapter()) {
+  if (!storage) {
+    return { ok: false, message: "Browser storage is unavailable in this environment." };
+  }
+
+  try {
+    storage.setItem(SAVE_STORAGE_KEY, JSON.stringify(createSaveSnapshot()));
+    return { ok: true, message: "Campaign saved to browser storage." };
+  } catch (error) {
+    return { ok: false, message: "Campaign could not be saved in browser storage." };
+  }
+}
+
+function loadGame(storage = getStorageAdapter()) {
+  const snapshotResult = readSaveSnapshot(storage);
+  if (!snapshotResult.ok) {
+    return { ok: false, message: getSaveErrorMessage(snapshotResult.reason) };
+  }
+
+  restoreSavedState(snapshotResult.snapshot.state);
+  return { ok: true, message: `Campaign loaded: Turn ${state.turn}, Treasury ${state.treasury}.` };
+}
+
+function getSaveMetadata(storage = getStorageAdapter()) {
+  const snapshotResult = readSaveSnapshot(storage);
+  if (!snapshotResult.ok) {
+    return {
+      exists: false,
+      summary: snapshotResult.reason === "invalid"
+        ? "Stored campaign data is unreadable. Save again to replace it."
+        : snapshotResult.reason === "unavailable"
+          ? "Browser storage is unavailable in this environment."
+        : "No campaign save found in this browser."
+    };
+  }
+
+  return {
+    exists: true,
+    summary: `Saved campaign available: Turn ${snapshotResult.snapshot.state.turn}, Treasury ${snapshotResult.snapshot.state.treasury}.`
+  };
+}
+
+function readSaveSnapshot(storage = getStorageAdapter()) {
+  if (!storage) {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  const rawSnapshot = storage.getItem(SAVE_STORAGE_KEY);
+  if (!rawSnapshot) {
+    return { ok: false, reason: "missing" };
+  }
+
+  try {
+    const snapshot = JSON.parse(rawSnapshot);
+    return isValidSaveSnapshot(snapshot)
+      ? { ok: true, snapshot }
+      : { ok: false, reason: "invalid" };
+  } catch (error) {
+    return { ok: false, reason: "invalid" };
+  }
+}
+
+function restoreSavedState(savedState) {
+  Object.assign(state, hydrateSavedState(savedState));
+  refreshIndexes();
+  ensureSelectedAttackTarget();
+  return state;
+}
+
+function hydrateSavedState(savedState) {
+  const baseState = createInitialState();
+
+  return {
+    ...baseState,
+    turn: Number.isFinite(savedState.turn) ? savedState.turn : baseState.turn,
+    treasury: Number.isFinite(savedState.treasury) ? savedState.treasury : baseState.treasury,
+    activeMapId: MAP_DEFINITIONS[savedState.activeMapId] ? savedState.activeMapId : baseState.activeMapId,
+    directiveId: DIRECTIVES[savedState.directiveId] ? savedState.directiveId : baseState.directiveId,
+    selectedDetailTab: isAllowedValue(savedState.selectedDetailTab, ["overview", "court", "conquest"]) ? savedState.selectedDetailTab : baseState.selectedDetailTab,
+    selectedRosterTab: isAllowedValue(savedState.selectedRosterTab, ["deployed", "all"]) ? savedState.selectedRosterTab : baseState.selectedRosterTab,
+    selectedRosterFilter: getRosterFilterById(savedState.selectedRosterFilter).id,
+    selectedRegionId: getValidRegionId(savedState.selectedRegionId, baseState.selectedRegionId),
+    selectedAttackTargetId: typeof savedState.selectedAttackTargetId === "string" ? savedState.selectedAttackTargetId : null,
+    attackUsedThisTurn: Boolean(savedState.attackUsedThisTurn),
+    gameWon: Boolean(savedState.gameWon),
+    activatedAbilities: { ...(savedState.activatedAbilities || {}) },
+    activeEffects: cloneActiveEffects(savedState.activeEffects),
+    regions: savedState.regions.map(cloneRegion),
+    characters: savedState.characters.map(cloneCharacter),
+    log: cloneLogEntries(savedState.log).slice(-48)
+  };
+}
+
+function getStorageAdapter() {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isValidSaveSnapshot(snapshot) {
+  if (!snapshot || snapshot.version !== SAVE_SCHEMA_VERSION || !snapshot.state) {
+    return false;
+  }
+
+  const savedState = snapshot.state;
+  return (
+    Number.isFinite(savedState.turn) &&
+    Number.isFinite(savedState.treasury) &&
+    Array.isArray(savedState.regions) &&
+    Array.isArray(savedState.characters) &&
+    Array.isArray(savedState.log) &&
+    matchesExpectedIds(savedState.regions, INITIAL_REGIONS) &&
+    matchesExpectedIds(savedState.characters, INITIAL_CHARACTERS)
+  );
+}
+
+function matchesExpectedIds(items, expectedItems) {
+  const itemIds = new Set(items.map((item) => item && item.id));
+  return expectedItems.length === items.length && expectedItems.every((item) => itemIds.has(item.id));
+}
+
+function getSaveErrorMessage(reason) {
+  if (reason === "invalid") {
+    return "The stored campaign save is unreadable. Save again to replace it.";
+  }
+
+  if (reason === "unavailable") {
+    return "Browser storage is unavailable in this environment.";
+  }
+
+  return "No saved campaign was found in this browser.";
+}
+
+function cloneActiveEffects(activeEffects = {}) {
+  return Object.fromEntries(
+    Object.entries(activeEffects).map(([regionId, effect]) => [
+      regionId,
+      {
+        attackBonus: Number(effect.attackBonus) || 0,
+        stabilityBonus: Number(effect.stabilityBonus) || 0,
+        musterBonus: Number(effect.musterBonus) || 0,
+        ignoreRivalry: Boolean(effect.ignoreRivalry),
+        notes: Array.isArray(effect.notes) ? [...effect.notes] : []
+      }
+    ])
+  );
+}
+
+function cloneLogEntries(logEntries = []) {
+  return logEntries
+    .filter((entry) => entry && typeof entry.message === "string")
+    .map((entry) => ({
+      turn: Number.isFinite(entry.turn) ? entry.turn : state.turn,
+      type: typeof entry.type === "string" ? entry.type : "system",
+      message: entry.message
+    }));
+}
+
+function getFilteredCharacters(filterId) {
+  const sortedCharacters = getSortedCharacters();
+
+  switch (filterId) {
+    case "unassigned":
+      return sortedCharacters.filter((character) => !getCharacterAssignment(character.id));
+    case "low-loyalty":
+      return sortedCharacters.filter((character) => character.loyalty < 40);
+    case "active-ready":
+      return sortedCharacters.filter((character) => character.abilityType === "active" && !state.activatedAbilities[character.id]);
+    case "all":
+    default:
+      return sortedCharacters;
+  }
+}
+
+function getRosterFilterById(filterId) {
+  return ROSTER_FILTERS.find((filter) => filter.id === filterId) || ROSTER_FILTERS[0];
+}
+
+function getValidRegionId(regionId, fallbackId) {
+  return INITIAL_REGIONS.some((region) => region.id === regionId) ? regionId : fallbackId;
+}
+
+function isAllowedValue(value, allowedValues) {
+  return allowedValues.includes(value);
+}
+
 function getAssignedCharacters() {
   return state.characters.filter((character) => getCharacterAssignment(character.id));
 }
@@ -2466,10 +2757,15 @@ if (typeof module !== "undefined" && module.exports) {
     LANDMARKS,
     MAP_DEFINITIONS,
     MAP_LEGEND_SECTIONS,
+    ROSTER_FILTERS,
     INITIAL_REGIONS,
     INITIAL_CHARACTERS,
     state,
     resetState,
+    createSaveSnapshot,
+    saveGame,
+    loadGame,
+    getSaveMetadata,
     renderMapLegend,
     renderCharacterRosterMarkup,
     computeRegionOutput,
@@ -2481,6 +2777,7 @@ if (typeof module !== "undefined" && module.exports) {
     getSelectedRegion,
     getRegionById,
     getCharacterById,
+    getFilteredCharacters,
     getRegionOfficers,
     getCharacterAssignment,
     getOwnedRegions,

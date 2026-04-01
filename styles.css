@@ -716,6 +716,42 @@ select:hover {
   background: linear-gradient(180deg, rgba(218, 181, 111, 0.18), rgba(218, 181, 111, 0.05));
 }
 
+.roster-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roster-filter {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.roster-filter:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.roster-filter.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(218, 181, 111, 0.16), rgba(218, 181, 111, 0.05));
+}
+
+.roster-filter strong {
+  min-width: 1.5rem;
+  text-align: center;
+  color: var(--accent);
+}
+
 .roster-panel-stack,
 .roster-focus-grid {
   display: grid;
@@ -1209,6 +1245,23 @@ select {
   align-content: start;
 }
 
+.turn-utility {
+  display: grid;
+  gap: 10px;
+}
+
+.save-button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.save-status {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .victory-banner {
   border: 1px solid rgba(223, 226, 160, 0.4);
   border-radius: 14px;
@@ -1221,6 +1274,7 @@ select:focus,
 .directive-button:focus,
 .region-card:focus,
 .roster-tab:focus,
+.roster-filter:focus,
 .target-card:focus,
 .action-button:focus,
 .end-turn-button:focus {
@@ -1277,6 +1331,10 @@ select:focus,
   .post-metrics,
   .roster-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .save-button-row {
+    grid-template-columns: 1fr;
   }
 
   .map-canvas,

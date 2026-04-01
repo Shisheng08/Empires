@@ -21,7 +21,9 @@ Run the game-rule tests with:
 - Use the top bar to switch the global directive each turn.
 - In owned regions, assign a governor and optional assistant from the center panel.
 - Use the right-side officer panel tabs to switch between the selected province court and the full imperial roster.
+- In the `All Officers` tab, use the filter chips to surface unassigned, low-loyalty, or ready-active officers.
 - Activate available active abilities from the selected region before combat.
+- Use `Save Campaign` and `Load Save` in the turn panel to persist progress in browser `localStorage`.
 - Pick an adjacent neutral region in the conquest section and launch one assault per turn.
 - Click `End Turn` to collect gold, resolve loyalty changes, and refresh your conquest action.
 
@@ -30,12 +32,14 @@ Run the game-rule tests with:
 - 7 regions with wealth, fortress, and mystic types
 - 9 named characters with stats, loyalty, traits, and relationships
 - Governor and assistant assignments
+- Browser save/load using `localStorage`
 - Visible regional output formulas for gold, defense, and stability
 - Data-driven SVG campaign map for quick province overview
 - Three directives: Conquest, Development, Stability
 - Adjacency-based conquest with combat preview and auto-resolve
 - Passive and active abilities
 - Loyalty bands and lightweight friend/rival effects
+- Roster tabs plus officer filters for faster court management
 - Event log and victory condition
 
 ## File Layout

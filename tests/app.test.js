@@ -3,6 +3,22 @@ const assert = require("node:assert/strict");
 
 const game = require("../app.js");
 
+function createFakeStorage() {
+  const backingStore = new Map();
+
+  return {
+    getItem(key) {
+      return backingStore.has(key) ? backingStore.get(key) : null;
+    },
+    setItem(key, value) {
+      backingStore.set(key, String(value));
+    },
+    removeItem(key) {
+      backingStore.delete(key);
+    }
+  };
+}
+
 test.beforeEach(() => {
   game.resetState();
 });
@@ -111,4 +127,50 @@ test("renderCharacterRosterMarkup can switch to the full roster view", () => {
   assert.match(markup, /All Officers \(9\)/);
   assert.match(markup, /Seraphine Vale/);
   assert.match(markup, /Serving here/);
+});
+
+test("getFilteredCharacters surfaces unassigned and ready active officers", () => {
+  const unassignedIds = game.getFilteredCharacters("unassigned").map((character) => character.id);
+  const readyActiveIds = game.getFilteredCharacters("active-ready").map((character) => character.id);
+
+  assert.equal(unassignedIds.includes("dorian-blacktide"), true);
+  assert.equal(unassignedIds.includes("kael-thorn"), false);
+  assert.equal(readyActiveIds.includes("merek-ashfall"), true);
+
+  game.updateAssignment("obsidian-crown", "assistant", "lysandra-crow");
+  game.activateAbility("lysandra-crow");
+
+  const refreshedReadyIds = game.getFilteredCharacters("active-ready").map((character) => character.id);
+  assert.equal(refreshedReadyIds.includes("lysandra-crow"), false);
+});
+
+test("saveGame and loadGame round-trip the campaign state", () => {
+  const storage = createFakeStorage();
+
+  game.setDirective("conquest");
+  game.updateAssignment("silvermere", "assistant", null);
+
+  const saveResult = game.saveGame(storage);
+  assert.equal(saveResult.ok, true);
+  assert.equal(game.getSaveMetadata(storage).exists, true);
+
+  game.setDirective("stability");
+  game.updateAssignment("silvermere", "assistant", "dorian-blacktide");
+
+  const loadResult = game.loadGame(storage);
+  assert.equal(loadResult.ok, true);
+  assert.equal(game.state.directiveId, "conquest");
+  assert.equal(game.getRegionById("silvermere").assistantId, null);
+});
+
+test("loadGame rejects unreadable saved data", () => {
+  const storage = createFakeStorage();
+  storage.setItem("empire-of-the-chosen-save", "{bad json");
+
+  const loadResult = game.loadGame(storage);
+  const meta = game.getSaveMetadata(storage);
+
+  assert.equal(loadResult.ok, false);
+  assert.equal(meta.exists, false);
+  assert.match(meta.summary, /unreadable/i);
 });
