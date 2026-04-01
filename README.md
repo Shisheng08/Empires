@@ -18,11 +18,12 @@ Run the game-rule tests with:
 
 - Click a region in the left panel to inspect it.
 - Click a province on the visual map or in the left panel to inspect it.
-- Use the top bar to switch the global directive each turn.
+- Use the top bar to plan the next global directive. The directive already in effect remains active until the turn ends.
 - In owned regions, assign a governor and optional assistant from the center panel.
 - Use the right-side officer panel tabs to switch between the selected province court and the full imperial roster.
 - In the `All Officers` tab, use the filter chips to surface unassigned, low-loyalty, or ready-active officers.
 - Activate available active abilities from the selected region before combat.
+- The top bar shows both the directive currently in force and the directive queued for next turn.
 - Watch the turn alert strip for blocked provinces, unstable courts, loyalty trouble, and ready powers.
 - Use `Save Campaign` and `Load Save` in the turn panel to persist progress in browser `localStorage`.
 - Pick an adjacent neutral region in the conquest section and launch one assault per turn. The selected province auto-focuses its strongest nearby target first.

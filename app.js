@@ -3,6 +3,7 @@ const DIRECTIVES = {
     id: "conquest",
     name: "Conquest",
     summary: "Push the front. Assaults gain +4 attack, but every owned region suffers -1 stability this turn.",
+    effectText: "Active effect: assaults gain +4 attack, but owned regions suffer -1 stability during turn-end resolution.",
     attackBonus: 4,
     goldBonus: 0,
     stabilityBonus: -1
@@ -11,6 +12,7 @@ const DIRECTIVES = {
     id: "development",
     name: "Development",
     summary: "Favor caravans, tax ledgers, and civic order. Owned regions gain +2 gold this turn.",
+    effectText: "Active effect: owned regions gain +2 gold during turn-end resolution.",
     attackBonus: 0,
     goldBonus: 2,
     stabilityBonus: 0
@@ -19,6 +21,7 @@ const DIRECTIVES = {
     id: "stability",
     name: "Stability",
     summary: "Strengthen legitimacy and recovery. Owned regions gain +2 stability and assigned officers recover extra loyalty.",
+    effectText: "Active effect: owned regions gain +2 stability, and assigned officers recover extra loyalty during turn-end resolution.",
     attackBonus: 0,
     goldBonus: 0,
     stabilityBonus: 2
@@ -444,6 +447,7 @@ function createInitialState() {
     treasury: 24,
     activeMapId: "ashen-realm",
     directiveId: "development",
+    plannedDirectiveId: "development",
     selectedDetailTab: "overview",
     selectedRosterTab: "deployed",
     selectedRosterFilter: "all",
@@ -497,6 +501,8 @@ function createElements() {
     mapLegend: document.querySelector("#map-legend"),
     currentDirectiveName: document.querySelector("#current-directive-name"),
     currentDirectiveCopy: document.querySelector("#current-directive-copy"),
+    nextDirectiveName: document.querySelector("#next-directive-name"),
+    nextDirectiveCopy: document.querySelector("#next-directive-copy"),
     directiveControls: document.querySelector("#directive-controls"),
     selectedRegionStatus: document.querySelector("#selected-region-status"),
     regionList: document.querySelector("#region-list"),
@@ -523,7 +529,8 @@ const elements = createElements();
 // Boot the prototype with seeded logs and a valid default attack target.
 function init() {
   addLogEntry("The Chosen banner rises over Obsidian Crown and Silvermere.", "system");
-  addLogEntry(`Directive chosen: ${getCurrentDirective().name}.`, "directive");
+  addLogEntry(`Directive in effect: ${getCurrentDirective().name}.`, "directive");
+  addLogEntry(`Next turn is currently prepared under the ${getPlannedDirective().name} directive.`, "system");
   addLogEntry("One assault may be launched each turn against an adjacent neutral province.", "system");
   ensureSelectedAttackTarget();
   bindEvents();
@@ -770,22 +777,29 @@ function renderMapLegend() {
 }
 
 function renderTopBar() {
+  const currentDirective = getCurrentDirective();
+  const plannedDirective = getPlannedDirective();
+
   elements.turnNumber.textContent = String(state.turn);
   elements.treasuryValue.textContent = String(state.treasury);
   elements.ownedCount.textContent = `${getOwnedRegions().length} / ${state.regions.length}`;
-  elements.currentDirectiveName.textContent = getCurrentDirective().name;
-  elements.currentDirectiveCopy.textContent = getCurrentDirective().summary;
+  elements.currentDirectiveName.textContent = currentDirective.name;
+  elements.currentDirectiveCopy.textContent = currentDirective.effectText;
+  elements.nextDirectiveName.textContent = plannedDirective.name;
+  elements.nextDirectiveCopy.textContent = plannedDirective.id === currentDirective.id
+    ? "No directive change is queued. If you do nothing, this same directive will govern the next turn."
+    : getQueuedDirectiveCopy(plannedDirective);
 }
 
 function renderDirectiveControls() {
   elements.directiveControls.innerHTML = Object.values(DIRECTIVES)
     .map((directive) => `
       <button
-        class="directive-button ${directive.id === state.directiveId ? "active" : ""}"
+        class="directive-button ${directive.id === state.plannedDirectiveId ? "active" : ""} ${directive.id === state.directiveId ? "current" : ""}"
         type="button"
         data-directive-id="${directive.id}"
       >
-        <span class="mini-label">Directive</span>
+        <span class="mini-label">${getDirectiveButtonLabel(directive)}</span>
         <strong>${directive.name}</strong>
       </button>
     `)
@@ -1578,10 +1592,11 @@ function renderTurnPanel() {
   const assignedCount = getAssignedCharacters().length;
   const attackState = state.attackUsedThisTurn ? "assault spent" : "assault ready";
   const directive = getCurrentDirective().name;
+  const nextDirective = getPlannedDirective().name;
   const saveMeta = getSaveMetadata();
   const alerts = getEmpireAlerts();
 
-  elements.turnSummary.textContent = `Directive: ${directive}. ${assignedCount} officers are currently assigned. This turn's conquest action is ${attackState}.`;
+  elements.turnSummary.textContent = `Directive in force: ${directive}. Planned for next turn: ${nextDirective}. ${assignedCount} officers are currently assigned, and this turn's conquest action is ${attackState}.`;
   elements.turnAlerts.innerHTML = renderTurnAlerts(alerts);
   elements.saveStatus.textContent = saveMeta.summary;
   elements.loadGameButton.disabled = !saveMeta.exists;
@@ -1602,13 +1617,15 @@ function renderTurnPanel() {
 // Gameplay actions.
 
 function setDirective(directiveId) {
-  if (!DIRECTIVES[directiveId] || directiveId === state.directiveId) {
+  if (!DIRECTIVES[directiveId] || directiveId === state.plannedDirectiveId) {
     return;
   }
 
-  state.directiveId = directiveId;
-  addLogEntry(`Directive chosen: ${getCurrentDirective().name}.`, "directive");
-  ensureSelectedAttackTarget();
+  state.plannedDirectiveId = directiveId;
+  addLogEntry(
+    `Directive prepared for next turn: ${getPlannedDirective().name}. ${getCurrentDirective().name} remains in effect for turn ${state.turn}.`,
+    "directive"
+  );
   render();
 }
 
@@ -1769,6 +1786,8 @@ function endTurn() {
   resolveLoyaltyChanges(outputs);
 
   state.turn += 1;
+  state.directiveId = state.plannedDirectiveId;
+  state.plannedDirectiveId = state.directiveId;
   state.attackUsedThisTurn = false;
   state.activatedAbilities = {};
   state.activeEffects = {};
@@ -1777,7 +1796,7 @@ function endTurn() {
   addLogEntry(`Treasury grows by ${totalGold} gold and now stands at ${state.treasury}.`, "system");
   addLogEntry(`${highestDefense.region.name} is your strongest bastion at ${highestDefense.output.defense.total} defense.`, "system");
   addLogEntry(`${lowestStability.region.name} is your most fragile court at ${lowestStability.output.stability.total} stability. Empire average stability is ${averageStability}.`, "warning");
-  addLogEntry(`New turn begins under the ${getCurrentDirective().name} directive.`, "directive");
+  addLogEntry(`New turn begins under the ${getCurrentDirective().name} directive. Its effects now govern this turn.`, "directive");
   render();
 }
 
@@ -1939,11 +1958,11 @@ function resolveLoyaltyChanges(outputs) {
         delta -= 2;
       }
 
-      if (state.directiveId === "stability") {
+      if (getCurrentDirective().id === "stability") {
         delta += 2;
       }
 
-      if (state.directiveId === "development" && region.type === "wealth") {
+      if (getCurrentDirective().id === "development" && region.type === "wealth") {
         delta += 1;
       }
 
@@ -2388,6 +2407,30 @@ function getCurrentDirective() {
   return DIRECTIVES[state.directiveId];
 }
 
+function getPlannedDirective() {
+  return DIRECTIVES[state.plannedDirectiveId] || getCurrentDirective();
+}
+
+function getDirectiveButtonLabel(directive) {
+  if (directive.id === state.directiveId && directive.id === state.plannedDirectiveId) {
+    return "Now And Next";
+  }
+
+  if (directive.id === state.directiveId) {
+    return "In Effect";
+  }
+
+  if (directive.id === state.plannedDirectiveId) {
+    return "Queued";
+  }
+
+  return "Directive";
+}
+
+function getQueuedDirectiveCopy(directive) {
+  return directive.effectText.replace("Active effect:", "Next turn:");
+}
+
 function getTerrainFriction(region) {
   if (region.type === "fortress") {
     return 3;
@@ -2414,6 +2457,7 @@ function createSaveSnapshot() {
       treasury: state.treasury,
       activeMapId: state.activeMapId,
       directiveId: state.directiveId,
+      plannedDirectiveId: state.plannedDirectiveId,
       selectedDetailTab: state.selectedDetailTab,
       selectedRosterTab: state.selectedRosterTab,
       selectedRosterFilter: state.selectedRosterFilter,
@@ -2508,6 +2552,7 @@ function hydrateSavedState(savedState) {
     treasury: Number.isFinite(savedState.treasury) ? savedState.treasury : baseState.treasury,
     activeMapId: MAP_DEFINITIONS[savedState.activeMapId] ? savedState.activeMapId : baseState.activeMapId,
     directiveId: DIRECTIVES[savedState.directiveId] ? savedState.directiveId : baseState.directiveId,
+    plannedDirectiveId: DIRECTIVES[savedState.plannedDirectiveId] ? savedState.plannedDirectiveId : (DIRECTIVES[savedState.directiveId] ? savedState.directiveId : baseState.plannedDirectiveId),
     selectedDetailTab: isAllowedValue(savedState.selectedDetailTab, ["overview", "court", "conquest"]) ? savedState.selectedDetailTab : baseState.selectedDetailTab,
     selectedRosterTab: isAllowedValue(savedState.selectedRosterTab, ["deployed", "all"]) ? savedState.selectedRosterTab : baseState.selectedRosterTab,
     selectedRosterFilter: getRosterFilterById(savedState.selectedRosterFilter).id,
@@ -2908,6 +2953,7 @@ if (typeof module !== "undefined" && module.exports) {
     getRelationshipInfo,
     getLoyaltyBand,
     getCurrentDirective,
+    getPlannedDirective,
     getSelectedRegion,
     getRegionById,
     getCharacterById,

@@ -30,9 +30,19 @@
       </div>
 
       <div class="directive-block">
-        <span class="hud-label">Current Directive</span>
-        <strong id="current-directive-name">Development</strong>
-        <p id="current-directive-copy" class="directive-copy"></p>
+        <div class="directive-state-grid">
+          <article class="directive-state-card current">
+            <span class="hud-label">In Effect This Turn</span>
+            <strong id="current-directive-name">Development</strong>
+            <p id="current-directive-copy" class="directive-copy"></p>
+          </article>
+          <article class="directive-state-card queued">
+            <span class="hud-label">Prepared For Next Turn</span>
+            <strong id="next-directive-name">Development</strong>
+            <p id="next-directive-copy" class="directive-copy"></p>
+          </article>
+        </div>
+        <span class="hud-label">Plan Next Turn</span>
         <div id="directive-controls" class="directive-controls"></div>
       </div>
     </header>

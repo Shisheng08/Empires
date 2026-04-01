@@ -30,6 +30,7 @@ test("resetState restores the seeded game state", () => {
   game.resetState();
 
   assert.equal(game.state.directiveId, "development");
+  assert.equal(game.state.plannedDirectiveId, "development");
   assert.equal(game.getRegionById("silvermere").governorId, "seraphine-vale");
   assert.equal(game.state.turn, 1);
 });
@@ -42,17 +43,26 @@ test("computeRegionOutput returns the seeded Silvermere totals", () => {
   assert.equal(output.stability.total, 20);
 });
 
-test("conquest directive improves attack preview while keeping the defense side unchanged", () => {
+test("queued directive does not affect the current turn and applies after turn rollover", () => {
   const attacker = game.getRegionById("obsidian-crown");
   const defender = game.getRegionById("veilmere");
   const developmentPreview = game.computeCombatPreview(attacker, defender);
 
   game.setDirective("conquest");
+  const queuedPreview = game.computeCombatPreview(attacker, defender);
+
+  assert.equal(game.state.directiveId, "development");
+  assert.equal(game.state.plannedDirectiveId, "conquest");
+  assert.equal(queuedPreview.attack.total, developmentPreview.attack.total);
+  assert.equal(queuedPreview.defense.total, developmentPreview.defense.total);
+
+  game.endTurn();
   const conquestPreview = game.computeCombatPreview(attacker, defender);
 
+  assert.equal(game.state.directiveId, "conquest");
+  assert.equal(game.state.plannedDirectiveId, "conquest");
   assert.equal(conquestPreview.attack.total - developmentPreview.attack.total, 4);
   assert.equal(conquestPreview.margin > developmentPreview.margin, true);
-  assert.equal(conquestPreview.defense.total, developmentPreview.defense.total);
 });
 
 test("Lysandra's active ability suppresses rivalry penalties", () => {
@@ -160,7 +170,8 @@ test("saveGame and loadGame round-trip the campaign state", () => {
 
   const loadResult = game.loadGame(storage);
   assert.equal(loadResult.ok, true);
-  assert.equal(game.state.directiveId, "conquest");
+  assert.equal(game.state.directiveId, "development");
+  assert.equal(game.state.plannedDirectiveId, "conquest");
   assert.equal(game.getRegionById("silvermere").assistantId, null);
 });
 
