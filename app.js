@@ -505,6 +505,7 @@ function createElements() {
     characterRoster: document.querySelector("#character-roster"),
     eventLog: document.querySelector("#event-log"),
     turnSummary: document.querySelector("#turn-summary"),
+    turnAlerts: document.querySelector("#turn-alerts"),
     victoryBanner: document.querySelector("#victory-banner"),
     saveStatus: document.querySelector("#save-status"),
     saveGameButton: document.querySelector("#save-game-button"),
@@ -1237,12 +1238,22 @@ function renderConquestSection(region, attackTargets, selectedTarget, preview) {
               <strong class="${preview.margin >= 0 ? "positive-text" : "negative-text"}">${formatSignedValue(preview.margin)}</strong>
             </div>
             <div class="battle-readout-card">
-              <span class="mini-label">Needed to win</span>
-              <strong>${preview.requiredAttack}</strong>
+              <span class="mini-label">Attack anchor</span>
+              <strong>${preview.attackAnchor}</strong>
             </div>
             <div class="battle-readout-card">
-              <span class="mini-label">Biggest pressure</span>
-              <strong>${preview.leadingFactor}</strong>
+              <span class="mini-label">Defense anchor</span>
+              <strong>${preview.defenseAnchor}</strong>
+            </div>
+          </div>
+          <div class="combat-guidance">
+            <div class="battle-readout-card emphasis">
+              <span class="mini-label">Required to win</span>
+              <strong>${preview.requiredAttack}</strong>
+            </div>
+            <div class="battle-readout-card emphasis">
+              <span class="mini-label">Best next step</span>
+              <strong>${preview.nextStep}</strong>
             </div>
           </div>
           <div class="field-row combat-footer">
@@ -1568,8 +1579,10 @@ function renderTurnPanel() {
   const attackState = state.attackUsedThisTurn ? "assault spent" : "assault ready";
   const directive = getCurrentDirective().name;
   const saveMeta = getSaveMetadata();
+  const alerts = getEmpireAlerts();
 
   elements.turnSummary.textContent = `Directive: ${directive}. ${assignedCount} officers are currently assigned. This turn's conquest action is ${attackState}.`;
+  elements.turnAlerts.innerHTML = renderTurnAlerts(alerts);
   elements.saveStatus.textContent = saveMeta.summary;
   elements.loadGameButton.disabled = !saveMeta.exists;
 
@@ -1884,16 +1897,17 @@ function computeCombatPreview(attackerRegion, defenderRegion) {
     .slice(1)
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))[0];
   const margin = attack.total - defense.total;
-  const leadingFactor = margin >= 0
-    ? (leadingAttackLine ? leadingAttackLine.label : "Base muster")
-    : (leadingDefenseLine ? leadingDefenseLine.label : "Base defense");
+  const attackAnchor = leadingAttackLine ? leadingAttackLine.label : "Base muster";
+  const defenseAnchor = leadingDefenseLine ? leadingDefenseLine.label : "Base defense";
 
   return {
     attack,
     defense,
     margin,
     requiredAttack: defense.total,
-    leadingFactor,
+    attackAnchor,
+    defenseAnchor,
+    nextStep: getCombatNextStep(attackerRegion, margin),
     outlook: getCombatOutlook(margin)
   };
 }
@@ -2574,6 +2588,103 @@ function getRosterFilterById(filterId) {
   return ROSTER_FILTERS.find((filter) => filter.id === filterId) || ROSTER_FILTERS[0];
 }
 
+function getCombatNextStep(attackerRegion, margin) {
+  if (margin >= 4) {
+    return "This province has a clean opening. Strike before you reshuffle the court.";
+  }
+
+  if (margin >= 0) {
+    return "The assault is viable, but an active ability would make it safer.";
+  }
+
+  if (getReadyActiveAbilities(attackerRegion).length) {
+    return "Trigger a ready active ability here before committing the assault.";
+  }
+
+  if (getCurrentDirective().id !== "conquest") {
+    return "Switch to the Conquest directive next turn to gain +4 attack.";
+  }
+
+  if (!attackerRegion.assistantId) {
+    return "Add an assistant to this province to improve the battle margin.";
+  }
+
+  return "Reassign stronger officers or attack from a different border province.";
+}
+
+function getReadyActiveAbilities(region) {
+  return [region.governorId, region.assistantId]
+    .map((characterId) => getCharacterById(characterId))
+    .filter((character) => character && character.abilityType === "active" && !state.activatedAbilities[character.id]);
+}
+
+function getEmpireAlerts() {
+  const ownedRegions = getOwnedRegions();
+  const missingGovernors = ownedRegions.filter((region) => !region.governorId);
+  const unstableRegions = ownedRegions
+    .map((region) => ({ region, output: computeRegionOutput(region) }))
+    .filter((entry) => entry.output.stability.total <= 8);
+  const lowLoyalty = state.characters.filter((character) => character.loyalty < 40);
+  const readyPowers = ownedRegions.flatMap((region) => getReadyActiveAbilities(region));
+  const idleOfficers = state.characters.filter((character) => !getCharacterAssignment(character.id));
+  const alerts = [];
+
+  if (missingGovernors.length) {
+    alerts.push({
+      tone: "danger",
+      label: "Blocked",
+      summary: `${missingGovernors.length} province${missingGovernors.length === 1 ? "" : "s"} need a governor before end turn.`
+    });
+  }
+
+  if (unstableRegions.length) {
+    alerts.push({
+      tone: "warning",
+      label: "Fragile Courts",
+      summary: `${unstableRegions.length} province${unstableRegions.length === 1 ? "" : "s"} sit at 8 stability or lower.`
+    });
+  }
+
+  if (lowLoyalty.length) {
+    alerts.push({
+      tone: "warning",
+      label: "Low Loyalty",
+      summary: `${lowLoyalty.length} officer${lowLoyalty.length === 1 ? "" : "s"} are below 40 loyalty.`
+    });
+  }
+
+  if (readyPowers.length) {
+    alerts.push({
+      tone: "info",
+      label: "Active Powers",
+      summary: `${readyPowers.length} ready active abilit${readyPowers.length === 1 ? "y is" : "ies are"} available this turn.`
+    });
+  }
+
+  if (!alerts.length) {
+    alerts.push({
+      tone: "success",
+      label: "Empire Status",
+      summary: idleOfficers.length
+        ? `${idleOfficers.length} reserve officer${idleOfficers.length === 1 ? "" : "s"} remain unassigned, but no urgent problems are pressing.`
+        : "All provinces are staffed and no urgent problems are pressing."
+    });
+  }
+
+  return alerts;
+}
+
+function renderTurnAlerts(alerts) {
+  return alerts
+    .map((alert) => `
+      <article class="turn-alert ${alert.tone}">
+        <div class="mini-label">${alert.label}</div>
+        <p>${alert.summary}</p>
+      </article>
+    `)
+    .join("");
+}
+
 function getValidRegionId(regionId, fallbackId) {
   return INITIAL_REGIONS.some((region) => region.id === regionId) ? regionId : fallbackId;
 }
@@ -2778,6 +2889,7 @@ if (typeof module !== "undefined" && module.exports) {
     getRegionById,
     getCharacterById,
     getFilteredCharacters,
+    getEmpireAlerts,
     getRegionOfficers,
     getCharacterAssignment,
     getOwnedRegions,

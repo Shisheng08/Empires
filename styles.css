@@ -1075,6 +1075,12 @@ select {
   gap: 12px;
 }
 
+.combat-guidance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .battle-readout-card {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1087,6 +1093,11 @@ select {
 .battle-readout-card strong {
   font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-size: 1.1rem;
+}
+
+.battle-readout-card.emphasis strong {
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
 .compact-tag-row {
@@ -1245,6 +1256,44 @@ select {
   align-content: start;
 }
 
+.turn-alerts {
+  display: grid;
+  gap: 10px;
+}
+
+.turn-alert {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.turn-alert p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.turn-alert.danger {
+  border-color: rgba(217, 127, 115, 0.36);
+  background: rgba(217, 127, 115, 0.08);
+}
+
+.turn-alert.warning {
+  border-color: rgba(224, 180, 111, 0.36);
+  background: rgba(224, 180, 111, 0.08);
+}
+
+.turn-alert.info {
+  border-color: rgba(140, 157, 211, 0.34);
+  background: rgba(140, 157, 211, 0.08);
+}
+
+.turn-alert.success {
+  border-color: rgba(135, 188, 148, 0.34);
+  background: rgba(135, 188, 148, 0.08);
+}
+
 .turn-utility {
   display: grid;
   gap: 10px;
@@ -1319,6 +1368,7 @@ select:focus,
   .ability-grid,
   .target-grid,
   .combat-preview,
+  .combat-guidance,
   .battle-readout,
   .stat-grid {
     grid-template-columns: 1fr;

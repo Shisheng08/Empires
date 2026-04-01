@@ -174,3 +174,35 @@ test("loadGame rejects unreadable saved data", () => {
   assert.equal(meta.exists, false);
   assert.match(meta.summary, /unreadable/i);
 });
+
+test("computeCombatPreview suggests ready active abilities before a risky assault", () => {
+  game.updateAssignment("obsidian-crown", "assistant", null);
+  game.updateAssignment("obsidian-crown", "assistant", "merek-ashfall");
+  game.getCharacterById("kael-thorn").loyalty = 22;
+  game.setDirective("stability");
+
+  const preview = game.computeCombatPreview(
+    game.getRegionById("obsidian-crown"),
+    game.getRegionById("thornwatch")
+  );
+
+  assert.equal(preview.margin < 0, true);
+  assert.match(preview.attackAnchor, /Merek Ashfall|Regional muster|Kael Thorn/);
+  assert.match(preview.defenseAnchor, /Defender readiness|Base province|Fortress province/);
+  assert.match(preview.nextStep, /ready active ability/i);
+});
+
+test("getEmpireAlerts highlights missing governors and loyalty pressure", () => {
+  game.selectRegion("obsidian-crown", false);
+  game.launchAttack();
+  game.getCharacterById("brannoc-voss").loyalty = 35;
+
+  const alerts = game.getEmpireAlerts();
+  const labels = alerts.map((alert) => alert.label);
+  const summaries = alerts.map((alert) => alert.summary).join(" ");
+
+  assert.equal(labels.includes("Blocked"), true);
+  assert.equal(labels.includes("Low Loyalty"), true);
+  assert.match(summaries, /need a governor/i);
+  assert.match(summaries, /below 40 loyalty/i);
+});

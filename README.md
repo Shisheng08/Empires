@@ -23,6 +23,7 @@ Run the game-rule tests with:
 - Use the right-side officer panel tabs to switch between the selected province court and the full imperial roster.
 - In the `All Officers` tab, use the filter chips to surface unassigned, low-loyalty, or ready-active officers.
 - Activate available active abilities from the selected region before combat.
+- Watch the turn alert strip for blocked provinces, unstable courts, loyalty trouble, and ready powers.
 - Use `Save Campaign` and `Load Save` in the turn panel to persist progress in browser `localStorage`.
 - Pick an adjacent neutral region in the conquest section and launch one assault per turn.
 - Click `End Turn` to collect gold, resolve loyalty changes, and refresh your conquest action.
