@@ -2,6 +2,14 @@
 
 Browser-based fantasy strategy prototype built with plain HTML, CSS, and vanilla JavaScript.
 
+## Resume
+
+If work is being resumed after a pause, start with:
+
+- `SESSION_HANDOFF.md` for current state and next priorities
+- `PROJECT_PLAN.md` for scope and phase status
+- `DEVELOPMENT_ROADMAP.md` for the practical next sequence
+
 ## Run
 
 Open `index.html` directly in any modern browser.
@@ -50,6 +58,7 @@ Run the game-rule tests with:
 - `styles.css`: dark fantasy UI styling and responsive layout
 - `app.js`: game state, formulas, rendering, interactions, combat, and turn resolution
 - `app.js` also contains the data-driven `MAP_DEFINITIONS` object for future maps
+- `SESSION_HANDOFF.md`: pause/resume snapshot and next recommended work
 - `PROJECT_PLAN.md`: reviewed plan and phase tracker
 - `DEVELOPMENT_ROADMAP.md`: phased roadmap and step-by-step development sequence
 - `AGENTS.md`: repository-specific working rules

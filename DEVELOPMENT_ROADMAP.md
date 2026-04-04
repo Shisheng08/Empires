@@ -4,6 +4,14 @@
 
 This roadmap turns the current prototype state into a practical development sequence. The priority is to keep the game playable while increasing clarity, balance, and strategic depth.
 
+## Current Snapshot
+
+- Core prototype loop is complete and playable
+- Browser save/load is implemented
+- Directive choice is queued for the next turn, not applied immediately
+- Combat balance has been tightened so opening conquest is no longer trivially favorable
+- Automated rule coverage exists and should keep growing with each rules change
+
 ## Phase 1: Stabilize the MVP
 
 Goal: make the current prototype reliable, readable, and internally consistent.
@@ -38,6 +46,10 @@ Deliverable:
 
 Players can evaluate province and character decisions quickly from the UI alone.
 
+Status:
+
+Mostly complete for the current MVP. Remaining work is more about polish depth than missing systems.
+
 ## Phase 3: Expand Content Depth
 
 Goal: enrich the prototype without increasing system complexity too aggressively.
@@ -70,6 +82,10 @@ Deliverable:
 
 The prototype survives refreshes and can be resumed easily.
 
+Status:
+
+Complete for the current scope. Further persistence work should only happen if the project later needs richer campaign state or reset UX.
+
 ## Phase 5: Extend the MVP Carefully
 
 Goal: add depth only after the current loop is proven solid.
@@ -84,6 +100,10 @@ Steps:
 Deliverable:
 
 A stronger strategy prototype without undermining clarity or maintainability.
+
+Status:
+
+This is the active phase.
 
 ## Step-by-Step Development Plan
 
@@ -111,9 +131,9 @@ A stronger strategy prototype without undermining clarity or maintainability.
 
 ## Recommended Immediate Tasks
 
-1. Balance combat and loyalty formulas.
-2. Improve combat preview readability.
-3. Improve map readability and province-state highlights.
-4. Improve event log explanations.
-5. Add a few more meaningful landmark effects.
-6. Add `localStorage` save and reset support.
+1. Add lightweight neutral defender identity or regional guard modifiers.
+2. Expand event variety tied to low stability, loyalty, and directives.
+3. Improve officer-level loyalty feedback so changes are easier to explain.
+4. Improve map readability and province-state highlights.
+5. Add a few more meaningful landmark effects or map-specific province rules.
+6. Extend automated tests with any new combat or event logic.

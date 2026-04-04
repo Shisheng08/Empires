@@ -4,7 +4,7 @@
 
 ## Plan Review
 
-The supplied project plan is directionally strong and fits the prototype well. The main adjustment is scope discipline: to keep the MVP clear in a direct-open browser prototype, the current implementation uses one manual assault per turn, lightweight loyalty and relationship rules, visible landmark bonuses, and no persistence beyond the active browser session.
+The supplied project plan remains directionally strong and still fits the prototype well. The main long-running adjustment has been scope discipline: to keep the MVP clear in a direct-open browser prototype, the implementation uses one manual assault per turn, lightweight loyalty and relationship rules, visible landmark bonuses, and only lightweight browser persistence.
 
 ## Current MVP Status
 
@@ -15,9 +15,12 @@ The supplied project plan is directionally strong and fits the prototype well. T
 - Completed: passive and active abilities
 - Completed: loyalty bands and lightweight friend/rival interactions
 - Completed: visual campaign map with extensible map-definition data
+- Completed: browser save/load through `localStorage`
+- Completed: directive queueing so directive changes apply on the next turn instead of immediately
 - Completed: victory by conquering all regions
 - In progress: balancing numbers, event variety, and deeper feedback polish
 - In progress: turning the map layer into a reusable scenario system rather than a single layout
+- In progress: making neutral resistance feel more distinct without adding full AI
 
 ## MVP Scope
 
@@ -42,7 +45,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 - Buildings or tech trees
 - Betrayal and civil war
 - Multiplayer
-- Full save/load systems
+- Full campaign persistence beyond simple browser storage
 
 ## Current Phase Tracker
 
@@ -69,7 +72,7 @@ The supplied project plan is directionally strong and fits the prototype well. T
 ### Phase 5 - Strategic Depth
 
 - Status: Partial
-- Notes: Landmarks and the first visual map are implemented. Further map polish, alternate scenarios, balancing, and event variety remain open.
+- Notes: Landmarks, the first visual map, save/load, and queued directives are implemented. Further map polish, alternate scenarios, neutral defender identity, balancing, and event variety remain open.
 
 ### Phase 6 - Refactor and Polish
 
@@ -78,8 +81,8 @@ The supplied project plan is directionally strong and fits the prototype well. T
 
 ## Immediate Next Improvements
 
-- Balance combat and loyalty numbers after real playtesting
+- Add lightweight neutral defender identity or regional guard pressure
+- Expand event outcomes tied to directives, low stability, and loyalty thresholds
+- Improve loyalty explanations at the officer level, not only in aggregate logs
 - Refine the visual map and formalize support for additional map definitions
-- Add richer event outcomes tied to directives and low stability
-- Surface more combat details for neutral defenses if neutral governors are added later
-- Consider trivial browser persistence only after the core loop feels stable
+- Continue balancing combat and loyalty numbers after more playtesting
